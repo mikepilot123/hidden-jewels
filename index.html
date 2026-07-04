@@ -19,7 +19,7 @@
     <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7.5 3.5v4M16.5 3.5v4M4 9h16M8 13h.01M12 13h.01M16 13h.01M8 16.5h.01M12 16.5h.01"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4.2 4.2"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
-    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0 2 5.3"/><path d="M20 4v7h-7"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.8 9A8 8 0 1 0 20 15.5"/><path d="M14.5 5 19.8 6.7 18.2 12"/></symbol>
     <symbol id="i-xmark" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
     <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
@@ -38,11 +38,11 @@
       <button type="button" class="nav-menu-toggle" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="viewNav">
         <svg class="icon"><use href="#i-menu"></use></svg>
       </button>
-      <div class="brand"><img class="brand-logo" src="assets/branding/hidden-jewels-logo.png" alt="Hidden Jewels Co." /></div>
+      <div class="brand"><img class="brand-logo" src="assets/branding/hidden-jewels-logo.jpg" alt="Hidden Jewels Co." /></div>
     </div>
     <nav class="view-nav" id="viewNav" role="tablist" aria-label="Sections">
       <div class="nav-drawer-header">
-        <img class="nav-drawer-logo" src="assets/branding/hidden-jewels-logo.png" alt="Hidden Jewels Co." />
+        <img class="nav-drawer-logo" src="assets/branding/hidden-jewels-logo.jpg" alt="Hidden Jewels Co." />
         <button type="button" class="nav-drawer-close" id="navDrawerClose" aria-label="Close menu">
           <svg class="icon"><use href="#i-xmark"></use></svg>
         </button>
@@ -141,8 +141,8 @@
       <section class="form-step form-success" data-appt-step="4" hidden aria-live="polite">
         <div class="success-check" aria-hidden="true">✓</div>
         <div class="form-step-heading">
-          <p class="form-section-label">Booking complete</p>
-          <h4>Appointment confirmed</h4>
+          <p class="form-section-label" id="apptSuccessLabel">Booking complete</p>
+          <h4 id="apptSuccessTitle">Appointment confirmed</h4>
           <p id="apptSuccessMessage"></p>
         </div>
       </section>

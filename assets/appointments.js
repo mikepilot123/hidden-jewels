@@ -32,6 +32,7 @@
   let currentStep = 1;
   let bound = false;
   let closeAppointmentItemDropdown = null;
+  let editingAppointmentId = null; // set while editing an existing appointment
 
   function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
   function todayISO() { return toISODate(new Date()); }
@@ -66,7 +67,7 @@
   function bookedTimesFor(dateStr) {
     return new Set(
       readAppointments()
-        .filter((a) => a.date === dateStr && a.status !== "cancelled")
+        .filter((a) => a.date === dateStr && a.status !== "cancelled" && a.id !== editingAppointmentId)
         .map((a) => a.time)
     );
   }
@@ -129,7 +130,7 @@
   // so staff can see the day's load at a glance.
   function bookedAppointmentsFor(dateStr) {
     return readAppointments()
-      .filter((a) => a.date === dateStr && a.status !== "cancelled")
+      .filter((a) => a.date === dateStr && a.status !== "cancelled" && a.id !== editingAppointmentId)
       .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
   }
 
@@ -206,7 +207,10 @@
     const goToViewBtn = $("apptGoToView");
     if (prevBtn) prevBtn.hidden = n === 1 || isComplete;
     if (nextBtn) nextBtn.hidden = n !== 2;
-    if (confirmBtn) confirmBtn.hidden = n !== 3;
+    if (confirmBtn) {
+      confirmBtn.hidden = n !== 3;
+      confirmBtn.textContent = editingAppointmentId ? "Save changes" : "Confirm appointment";
+    }
     if (createAnotherBtn) createAnotherBtn.hidden = !isComplete;
     if (goToViewBtn) goToViewBtn.hidden = !isComplete;
 
@@ -227,6 +231,7 @@
     selectedDate = null;
     selectedTime = null;
     selectedTechnician = "";
+    editingAppointmentId = null;
     const form = $("appointmentForm");
     if (form) form.reset();
     const itemInput = $("appointmentItem");
@@ -294,81 +299,35 @@
     const toggle = $(toggleId);
     if (!combobox || !input || !dropdown) return null;
 
-    function itemOptions(showAll) {
-      const names = window.RPC_MODEL_NAMES || [];
-      const query = showAll ? "" : input.value.trim().toLowerCase();
-      return query ? names.filter((name) => name.toLowerCase().includes(query)) : names;
-    }
-
-    function render(showAll) {
-      const options = itemOptions(showAll);
-      dropdown.innerHTML = options.length
-        ? options.map((name) => `<button type="button" class="device-option ${name === input.value ? "active" : ""}" role="option" data-item="${esc(name)}">${esc(name)}</button>`).join("")
-        : `<p class="device-dropdown-empty">No matching items.</p>`;
-      dropdown.querySelectorAll("[data-item]").forEach((btn) => {
-        btn.addEventListener("mousedown", (e) => e.preventDefault());
-        btn.addEventListener("click", () => choose(btn.dataset.item));
-      });
-    }
-
-    function open(showAll) {
-      render(showAll);
-      dropdown.hidden = false;
-      input.setAttribute("aria-expanded", "true");
-      combobox.classList.add("open");
-    }
-
     function close() {
       dropdown.hidden = true;
       input.setAttribute("aria-expanded", "false");
       combobox.classList.remove("open");
     }
 
-    function choose(name) {
-      input.value = name;
+    function openPicker() {
       close();
-      if (onChoose) onChoose(name);
+      window.HJProductPicker?.open({
+        title: "Select product for appointment",
+        initialQuery: input.value.trim(),
+        onSelect(selection) {
+          input.value = selection.label;
+          if (onChoose) onChoose(selection.label, selection);
+        },
+      });
     }
 
-    input.addEventListener("focus", () => open(true));
-    input.addEventListener("click", () => open(true));
-    input.addEventListener("input", () => open(false));
+    input.addEventListener("focus", openPicker);
+    input.addEventListener("click", openPicker);
     input.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowDown") {
+      if (e.key === "ArrowDown" || e.key === "Enter") {
         e.preventDefault();
-        open(true);
-        dropdown.querySelector(".device-option")?.focus();
+        openPicker();
       } else if (e.key === "Escape") {
         close();
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        close();
-        if (onChoose) onChoose(input.value.trim());
       }
     });
-    dropdown.addEventListener("keydown", (e) => {
-      const options = [...dropdown.querySelectorAll(".device-option")];
-      const i = options.indexOf(document.activeElement);
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        (options[i + 1] || options[0])?.focus();
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        (options[i - 1] || options[options.length - 1])?.focus();
-      } else if (e.key === "Escape") {
-        close();
-        input.focus();
-      }
-    });
-    toggle?.addEventListener("click", () => {
-      if (dropdown.hidden) open(true);
-      else close();
-      input.focus();
-    });
-    document.addEventListener("click", (e) => {
-      if (combobox.contains(e.target)) return;
-      close();
-    });
+    toggle?.addEventListener("click", openPicker);
 
     return close;
   }
@@ -384,6 +343,7 @@
           <small>${esc(formatDateTime(item.date, item.time))}${item.phone ? " · " + esc(item.phone) : ""}</small>
         </div>
         <div class="booking-row-actions">
+          <button type="button" data-edit="${esc(item.id)}">Edit</button>
           <button type="button" data-complete="${esc(item.id)}">${item.status === "completed" ? "Reopen" : "Done"}</button>
           <button type="button" class="danger-text" data-delete="${esc(item.id)}">Delete</button>
         </div>
@@ -392,6 +352,12 @@
   }
 
   function bindRowActions(list) {
+    list.querySelectorAll("[data-edit]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const appointment = readAppointments().find((item) => item.id === btn.dataset.edit);
+        if (appointment) editAppointment(appointment);
+      });
+    });
     list.querySelectorAll("[data-complete]").forEach((btn) => {
       btn.addEventListener("click", () => {
         writeAppointments(readAppointments().map((item) =>
@@ -409,6 +375,34 @@
         renderSlots();
       });
     });
+  }
+
+  // Loads an existing appointment into the wizard for editing. Date/time
+  // stay changeable (its own slot is excluded from "booked" while editing —
+  // see bookedTimesFor/bookedAppointmentsFor), then jumps straight to the
+  // Details step since everything is already filled in.
+  function editAppointment(appointment) {
+    editingAppointmentId = appointment.id;
+    setPanel("create");
+    const [y, m, d] = appointment.date.split("-").map(Number);
+    viewMonth = startOfMonth(new Date(y, m - 1, d));
+    selectedDate = appointment.date;
+    selectedTime = appointment.time;
+    selectedTechnician = appointment.technician || "";
+    renderCalendar();
+    renderSlots();
+    renderTechnicianPicker();
+    const itemInput = $("appointmentItem");
+    if (itemInput) itemInput.value = appointment.item || "";
+    const clientInput = $("appointmentClient");
+    if (clientInput) clientInput.value = appointment.client || "";
+    const phoneInput = $("appointmentPhone");
+    if (phoneInput) phoneInput.value = appointment.phone || "";
+    const notesInput = $("appointmentNotes");
+    if (notesInput) notesInput.value = appointment.notes || "";
+    const msg = $("appointmentMessage");
+    if (msg) msg.hidden = true;
+    setStep(3);
   }
 
   function renderList() {
@@ -490,8 +484,10 @@
           if (msg) { msg.textContent = "Add the client name and item."; msg.hidden = false; }
           return;
         }
+        const isEdit = !!editingAppointmentId;
+        const existing = isEdit ? readAppointments().find((a) => a.id === editingAppointmentId) : null;
         const appointment = {
-          id: uid(),
+          id: isEdit ? editingAppointmentId : uid(),
           client,
           phone: ($("appointmentPhone")?.value || "").trim(),
           item,
@@ -499,17 +495,28 @@
           date: selectedDate,
           time: selectedTime,
           notes: ($("appointmentNotes")?.value || "").trim(),
-          status: "scheduled",
-          created: new Date().toISOString(),
+          status: existing?.status || "scheduled",
+          created: existing?.created || new Date().toISOString(),
         };
-        writeAppointments([appointment].concat(readAppointments()));
+        writeAppointments(
+          isEdit
+            ? readAppointments().map((a) => (a.id === editingAppointmentId ? appointment : a))
+            : [appointment].concat(readAppointments())
+        );
+        editingAppointmentId = null;
         if (msg) msg.hidden = true;
         renderList();
         const [y, m, d] = appointment.date.split("-").map(Number);
         const dateLabel = new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+        const successLabel = $("apptSuccessLabel");
+        const successTitle = $("apptSuccessTitle");
         const successMsg = $("apptSuccessMessage");
+        if (successLabel) successLabel.textContent = isEdit ? "Changes saved" : "Booking complete";
+        if (successTitle) successTitle.textContent = isEdit ? "Appointment updated" : "Appointment confirmed";
         if (successMsg) {
-          successMsg.textContent = `${client}'s appointment is booked for ${dateLabel} at ${minutesToLabel(timeToMinutes(appointment.time))}.`;
+          successMsg.textContent = isEdit
+            ? `${client}'s appointment is now ${dateLabel} at ${minutesToLabel(timeToMinutes(appointment.time))}.`
+            : `${client}'s appointment is booked for ${dateLabel} at ${minutesToLabel(timeToMinutes(appointment.time))}.`;
         }
         setStep(4);
       });
@@ -529,6 +536,11 @@
     // panel (and that day's scheduled appointments) only appear then.
     selectedDate = null;
     selectedTime = null;
+    selectedTechnician = "";
+    // Re-entering the Appointments tab always starts a fresh flow — an
+    // in-progress edit left behind by navigating away is abandoned, not
+    // silently resumed against whatever gets picked next.
+    editingAppointmentId = null;
     renderCalendar();
     renderSlots();
     renderList();

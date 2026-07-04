@@ -85,30 +85,6 @@
     const toggle = $("openLeadItemDropdown");
     if (!combobox || !input || !dropdown) return;
 
-    function itemOptions(showAll) {
-      const names = window.RPC_MODEL_NAMES || [];
-      const query = showAll ? "" : input.value.trim().toLowerCase();
-      return query ? names.filter((n) => n.toLowerCase().includes(query)) : names;
-    }
-
-    function renderDropdown(showAll) {
-      const options = itemOptions(showAll);
-      dropdown.innerHTML = options.length
-        ? options.map((name) => `<button type="button" class="device-option ${name === input.value ? "active" : ""}" role="option" data-item="${esc(name)}">${esc(name)}</button>`).join("")
-        : `<p class="device-dropdown-empty">No matching items.</p>`;
-      dropdown.querySelectorAll("[data-item]").forEach((btn) => {
-        btn.addEventListener("mousedown", (e) => e.preventDefault());
-        btn.addEventListener("click", () => choose(btn.dataset.item));
-      });
-    }
-
-    function open(showAll) {
-      renderDropdown(showAll);
-      dropdown.hidden = false;
-      input.setAttribute("aria-expanded", "true");
-      combobox.classList.add("open");
-    }
-
     function close() {
       dropdown.hidden = true;
       input.setAttribute("aria-expanded", "false");
@@ -116,40 +92,30 @@
     }
     closeLeadItemDropdown = close;
 
-    function choose(name) {
-      input.value = name;
+    function openPicker() {
       close();
+      window.HJProductPicker?.open({
+        title: "Select product for lead",
+        initialQuery: input.value.trim(),
+        onSelect(selection) {
+          input.value = selection.label;
+          const quoted = $("leadQuotedAmount");
+          if (quoted && selection.price) quoted.value = (selection.price / 100).toFixed(2);
+        },
+      });
     }
 
-    input.addEventListener("focus", () => open(true));
-    input.addEventListener("click", () => open(true));
-    input.addEventListener("input", () => open(false));
+    input.addEventListener("focus", openPicker);
+    input.addEventListener("click", openPicker);
     input.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowDown") {
+      if (e.key === "ArrowDown" || e.key === "Enter") {
         e.preventDefault();
-        open(true);
-        dropdown.querySelector(".device-option")?.focus();
+        openPicker();
       } else if (e.key === "Escape") {
-        close();
-      } else if (e.key === "Enter") {
-        e.preventDefault();
         close();
       }
     });
-    dropdown.addEventListener("keydown", (e) => {
-      const options = [...dropdown.querySelectorAll(".device-option")];
-      const i = options.indexOf(document.activeElement);
-      if (e.key === "ArrowDown") { e.preventDefault(); (options[i + 1] || options[0])?.focus(); }
-      else if (e.key === "ArrowUp") { e.preventDefault(); (options[i - 1] || options[options.length - 1])?.focus(); }
-      else if (e.key === "Escape") { close(); input.focus(); }
-    });
-    toggle?.addEventListener("click", () => {
-      if (dropdown.hidden) open(true); else close();
-      input.focus();
-    });
-    document.addEventListener("click", (e) => {
-      if (combobox && !combobox.contains(e.target)) close();
-    });
+    toggle?.addEventListener("click", openPicker);
   }
 
   // ---------- modal / step management ----------
