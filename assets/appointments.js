@@ -17,7 +17,7 @@
   const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
   const SCRIPT_URL = "https://hidden-jewels.vercel.app/api/leads";
-  const LS_PIN = "rpc_intake_pin";
+  const LS_PIN = "rpc_hj_pin";
   const DEFAULT_TECHNICIANS = [];
 
   const $ = (id) => document.getElementById(id);
