@@ -1,0 +1,9 @@
+{
+  "name": "hidden-jewels-api",
+  "private": true,
+  "type": "module",
+  "description": "Vercel serverless API for Hidden Jewels Co.'s Appointments and Leads web app. The static site itself stays on GitHub Pages.",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4"
+  }
+}
