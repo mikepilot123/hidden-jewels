@@ -3,7 +3,7 @@
    self-contained modules that each read the PIN from localStorage — this
    file owns the "connect" flow they depend on but never imports them. */
 (function () {
-  const SCRIPT_URL = "https://hidden-jewels-api.vercel.app/api/leads";
+  const SCRIPT_URL = "https://hidden-jewels.vercel.app/api/leads";
   const LS_PIN = "rpc_intake_pin";
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

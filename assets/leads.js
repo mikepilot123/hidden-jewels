@@ -5,7 +5,7 @@
    ============================================================ */
 
 (function () {
-  const LEADS_URL = "https://hidden-jewels-api.vercel.app/api/leads";
+  const LEADS_URL = "https://hidden-jewels.vercel.app/api/leads";
   const LS_PIN = "rpc_intake_pin";
   const STATUSES = ["New", "Contacted", "Quoted", "Follow-up", "Won", "Lost"];
 

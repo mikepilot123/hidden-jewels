@@ -16,7 +16,7 @@
   const SLOT_MINUTES = 30;
   const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-  const SCRIPT_URL = "https://hidden-jewels-api.vercel.app/api/leads";
+  const SCRIPT_URL = "https://hidden-jewels.vercel.app/api/leads";
   const LS_PIN = "rpc_intake_pin";
   const DEFAULT_TECHNICIANS = [];
 
