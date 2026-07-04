@@ -1,12 +1,12 @@
 /* ============================================================
-   Appointments — Cal.com-style booking, a 3-step wizard:
-   1) pick a day + time on a month calendar, 2) pick the item
-   (synced with the Shopify product catalog snapshot in
-   assets/products.json) and a staff member (Fresha-style chip
-   picker, shared staff list), 3) add the client's details to
-   confirm. Stored locally (no backend for the booking itself);
-   booked slots are excluded from the picker so two clients can't
-   be double-booked into the same time.
+   Appointments — a single-page booking form: pick a day + time on
+   a month calendar, pick the item (synced with the Shopify product
+   catalog snapshot in assets/products.json) and a staff member
+   (Fresha-style chip picker, shared staff list), then add the
+   client's details — all visible at once, no step navigation.
+   Stored locally (no backend for the booking itself); booked slots
+   are excluded from the picker so two clients can't be double-
+   booked into the same time.
    ============================================================ */
 
 (function () {
@@ -29,7 +29,6 @@
   let selectedTime = null; // "HH:MM"
   let selectedTechnician = ""; // "" = Any staff
   let technicians = [];
-  let currentStep = 1;
   let bound = false;
   let closeAppointmentItemDropdown = null;
   let editingAppointmentId = null; // set while editing an existing appointment
@@ -173,7 +172,6 @@
       btn.addEventListener("click", () => {
         selectedTime = btn.dataset.time;
         renderSlots();
-        if (selectedDate && selectedTime) setTimeout(() => setStep(2), 250);
       });
     });
   }
@@ -183,48 +181,25 @@
     return h * 60 + m;
   }
 
-  // ---------- step wizard ----------
+  // ---------- single-page form / success toggle ----------
 
-  function setStep(n) {
-    currentStep = n;
-    document.querySelectorAll(".form-step[data-appt-step]").forEach((section) => {
-      section.hidden = Number(section.dataset.apptStep) !== n;
-    });
-    document.querySelectorAll(".form-progress-step[data-appt-progress-step]").forEach((chip) => {
-      const stepNum = Number(chip.dataset.apptProgressStep);
-      chip.classList.toggle("active", stepNum === n);
-      chip.classList.toggle("complete", stepNum < n);
-    });
-    document.querySelectorAll(".form-progress-line").forEach((line, idx) => {
-      line.classList.toggle("complete", idx + 1 < n);
-    });
-
-    const isComplete = n === 4;
-    const prevBtn = $("apptPrevStep");
-    const nextBtn = $("apptNextStep");
+  // The booking form (When + Item/staff + Details) is one continuous page,
+  // not a multi-step wizard — this just swaps the whole form out for the
+  // confirmation view and back, and updates the submit button's label.
+  function setFormVisible(showForm) {
+    const form = $("appointmentForm");
+    const success = document.querySelector('.form-step[data-appt-step="4"]');
+    if (form) form.hidden = !showForm;
+    if (success) success.hidden = showForm;
     const confirmBtn = $("apptConfirmBtn");
     const createAnotherBtn = $("apptCreateAnother");
     const goToViewBtn = $("apptGoToView");
-    if (prevBtn) prevBtn.hidden = n === 1 || isComplete;
-    if (nextBtn) nextBtn.hidden = n !== 2;
     if (confirmBtn) {
-      confirmBtn.hidden = n !== 3;
-      confirmBtn.textContent = editingAppointmentId ? "Save changes" : "Confirm appointment";
+      confirmBtn.hidden = !showForm;
+      confirmBtn.textContent = editingAppointmentId ? "Save changes" : "Book appointment";
     }
-    if (createAnotherBtn) createAnotherBtn.hidden = !isComplete;
-    if (goToViewBtn) goToViewBtn.hidden = !isComplete;
-
-    if (n === 3) renderSummary();
-  }
-
-  function renderSummary() {
-    const summary = $("bookingSelectedSummary");
-    if (!summary || !selectedDate || !selectedTime) return;
-    const [y, m, d] = selectedDate.split("-").map(Number);
-    const dateLabel = new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
-    const item = ($("appointmentItem")?.value || "").trim();
-    const techLabel = selectedTechnician || "Any staff";
-    summary.textContent = `${dateLabel} at ${minutesToLabel(timeToMinutes(selectedTime))} · ${item || "Item"} · ${techLabel}`;
+    if (createAnotherBtn) createAnotherBtn.hidden = showForm;
+    if (goToViewBtn) goToViewBtn.hidden = showForm;
   }
 
   function resetSelection() {
@@ -236,12 +211,10 @@
     if (form) form.reset();
     const itemInput = $("appointmentItem");
     if (itemInput) itemInput.value = "";
-    const step2Msg = $("apptStep2Message");
-    if (step2Msg) step2Msg.hidden = true;
     renderTechnicianPicker();
     renderCalendar();
     renderSlots();
-    setStep(1);
+    setFormVisible(true);
   }
 
   // ---------- staff (Fresha-style chip picker) ----------
@@ -377,13 +350,14 @@
     });
   }
 
-  // Loads an existing appointment into the wizard for editing. Date/time
+  // Loads an existing appointment into the form for editing. Date/time
   // stay changeable (its own slot is excluded from "booked" while editing —
-  // see bookedTimesFor/bookedAppointmentsFor), then jumps straight to the
-  // Details step since everything is already filled in.
+  // see bookedTimesFor/bookedAppointmentsFor). Everything is on one page,
+  // so this just fills in the fields in place.
   function editAppointment(appointment) {
     editingAppointmentId = appointment.id;
     setPanel("create");
+    setFormVisible(true);
     const [y, m, d] = appointment.date.split("-").map(Number);
     viewMonth = startOfMonth(new Date(y, m - 1, d));
     selectedDate = appointment.date;
@@ -402,7 +376,7 @@
     if (notesInput) notesInput.value = appointment.notes || "";
     const msg = $("appointmentMessage");
     if (msg) msg.hidden = true;
-    setStep(3);
+    $("appointmentForm")?.scrollIntoView({ block: "start" });
   }
 
   function renderList() {
@@ -458,30 +432,24 @@
       toggleId: "openApptItemDropdown",
     });
 
-    $("apptPrevStep")?.addEventListener("click", () => {
-      if (currentStep > 1) setStep(currentStep - 1);
-    });
-    $("apptNextStep")?.addEventListener("click", () => {
-      closeAppointmentItemDropdown?.();
-      const msg = $("apptStep2Message");
-      const item = ($("appointmentItem")?.value || "").trim();
-      if (!item) {
-        if (msg) { msg.textContent = "Add the item or order."; msg.hidden = false; }
-        return;
-      }
-      if (msg) msg.hidden = true;
-      setStep(3);
-    });
-
     const form = $("appointmentForm");
     if (form) {
       form.addEventListener("submit", (event) => {
         event.preventDefault();
+        closeAppointmentItemDropdown?.();
         const msg = $("appointmentMessage");
         const client = ($("appointmentClient")?.value || "").trim();
         const item = ($("appointmentItem")?.value || "").trim();
-        if (!client || !item || !selectedDate || !selectedTime) {
-          if (msg) { msg.textContent = "Add the client name and item."; msg.hidden = false; }
+        if (!selectedDate || !selectedTime) {
+          if (msg) { msg.textContent = "Pick a day and time."; msg.hidden = false; }
+          return;
+        }
+        if (!item) {
+          if (msg) { msg.textContent = "Add the item or order."; msg.hidden = false; }
+          return;
+        }
+        if (!client) {
+          if (msg) { msg.textContent = "Add the client's name."; msg.hidden = false; }
           return;
         }
         const isEdit = !!editingAppointmentId;
@@ -518,7 +486,7 @@
             ? `${client}'s appointment is now ${dateLabel} at ${minutesToLabel(timeToMinutes(appointment.time))}.`
             : `${client}'s appointment is booked for ${dateLabel} at ${minutesToLabel(timeToMinutes(appointment.time))}.`;
         }
-        setStep(4);
+        setFormVisible(false);
       });
     }
 
@@ -546,7 +514,7 @@
     renderList();
     renderTechnicianPicker();
     fetchTechnicians();
-    setStep(1);
+    setFormVisible(true);
     setPanel("create");
   }
 

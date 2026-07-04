@@ -69,74 +69,67 @@
 
     <section class="appt-panel" data-appt-panel-section="create">
     <section class="booking-wizard-card">
-      <div class="form-progress" aria-label="Booking progress">
-        <span class="form-progress-step active" data-appt-progress-step="1">1<span>When</span></span>
-        <span class="form-progress-line"></span>
-        <span class="form-progress-step" data-appt-progress-step="2">2<span>Item</span></span>
-        <span class="form-progress-line"></span>
-        <span class="form-progress-step" data-appt-progress-step="3">3<span>Details</span></span>
-      </div>
-
-      <section class="form-step" data-appt-step="1">
-        <div class="form-step-heading"><p class="form-section-label">Step 1</p><h4>Pick a day and time</h4><p>Choose when you'd like to come in.</p></div>
-        <div class="booking-card">
-          <div class="booking-calendar-panel">
-            <div class="booking-calendar-header">
-              <button type="button" id="bookingPrevMonth" class="icon-btn ghost-btn" aria-label="Previous month"><svg class="icon"><use href="#i-chevron-left"></use></svg></button>
-              <strong id="bookingMonthLabel"></strong>
-              <button type="button" id="bookingNextMonth" class="icon-btn ghost-btn" aria-label="Next month"><svg class="icon"><use href="#i-chevron-right"></use></svg></button>
+      <form id="appointmentForm" class="appt-single-form">
+        <section class="form-section-block">
+          <div class="form-step-heading"><h4>Pick a day and time</h4><p>Choose when you'd like to come in.</p></div>
+          <div class="booking-card">
+            <div class="booking-calendar-panel">
+              <div class="booking-calendar-header">
+                <button type="button" id="bookingPrevMonth" class="icon-btn ghost-btn" aria-label="Previous month"><svg class="icon"><use href="#i-chevron-left"></use></svg></button>
+                <strong id="bookingMonthLabel"></strong>
+                <button type="button" id="bookingNextMonth" class="icon-btn ghost-btn" aria-label="Next month"><svg class="icon"><use href="#i-chevron-right"></use></svg></button>
+              </div>
+              <div class="booking-calendar-weekdays">
+                <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+              </div>
+              <div id="bookingCalendarGrid" class="booking-calendar-grid"></div>
             </div>
-            <div class="booking-calendar-weekdays">
-              <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-            </div>
-            <div id="bookingCalendarGrid" class="booking-calendar-grid"></div>
-          </div>
 
-          <div class="booking-slots-panel">
-            <p id="bookingSlotsLabel" class="booking-slots-label">Pick a day to see times</p>
-            <div id="bookingSlotsList" class="booking-slots-list"></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="form-step" data-appt-step="2" hidden>
-        <div class="form-step-heading"><p class="form-section-label">Step 2</p><h4>Item and staff</h4><p>Tell us what this is about, and pick a staff member if you have a preference.</p></div>
-        <div class="form-grid">
-          <div class="form-field form-field-full">
-            <label class="field-label" for="appointmentItem">Item / order *</label>
-            <div class="device-combobox" id="appointmentItemCombobox">
-              <input id="appointmentItem" class="text-input" autocomplete="off" required placeholder="Select or search for an item" aria-autocomplete="list" aria-expanded="false" aria-controls="appointmentItemDropdown" />
-              <button type="button" id="openApptItemDropdown" class="device-dropdown-btn" aria-label="Show items"><svg class="icon"><use href="#i-chevron-down"></use></svg></button>
-              <div id="appointmentItemDropdown" class="device-dropdown" role="listbox" hidden></div>
+            <div class="booking-slots-panel">
+              <p id="bookingSlotsLabel" class="booking-slots-label">Pick a day to see times</p>
+              <div id="bookingSlotsList" class="booking-slots-list"></div>
             </div>
           </div>
-          <div class="form-field form-field-full">
-            <label class="field-label">Staff</label>
-            <div id="technicianPicker" class="technician-picker"></div>
-          </div>
-        </div>
-        <p id="apptStep2Message" class="field-error" hidden></p>
-      </section>
+        </section>
 
-      <section class="form-step" data-appt-step="3" hidden>
-        <div class="form-step-heading"><p class="form-section-label">Step 3</p><h4>Your details</h4><p>Last step — how should we reach you?</p></div>
-        <p id="bookingSelectedSummary" class="booking-selected-summary"></p>
-        <form id="appointmentForm" class="form-grid">
-          <div class="form-field form-field-full">
-            <label class="field-label" for="appointmentClient">Client name *</label>
-            <input id="appointmentClient" class="text-input" required placeholder="e.g. Anita Singh" />
+        <section class="form-section-block">
+          <div class="form-step-heading"><h4>Item and staff</h4><p>Tell us what this is about, and pick a staff member if you have a preference.</p></div>
+          <div class="form-grid">
+            <div class="form-field form-field-full">
+              <label class="field-label" for="appointmentItem">Item / order *</label>
+              <div class="device-combobox" id="appointmentItemCombobox">
+                <input id="appointmentItem" class="text-input" autocomplete="off" required placeholder="Select or search for an item" aria-autocomplete="list" aria-expanded="false" aria-controls="appointmentItemDropdown" />
+                <button type="button" id="openApptItemDropdown" class="device-dropdown-btn" aria-label="Show items"><svg class="icon"><use href="#i-chevron-down"></use></svg></button>
+                <div id="appointmentItemDropdown" class="device-dropdown" role="listbox" hidden></div>
+              </div>
+            </div>
+            <div class="form-field form-field-full">
+              <label class="field-label">Staff</label>
+              <div id="technicianPicker" class="technician-picker"></div>
+            </div>
           </div>
-          <div class="form-field form-field-full">
-            <label class="field-label" for="appointmentPhone">Phone</label>
-            <input id="appointmentPhone" class="text-input" type="tel" placeholder="e.g. 868 712 3456" />
+        </section>
+
+        <section class="form-section-block">
+          <div class="form-step-heading"><h4>Your details</h4><p>How should we reach you?</p></div>
+          <div class="form-grid">
+            <div class="form-field form-field-full">
+              <label class="field-label" for="appointmentClient">Client name *</label>
+              <input id="appointmentClient" class="text-input" required placeholder="e.g. Anita Singh" />
+            </div>
+            <div class="form-field form-field-full">
+              <label class="field-label" for="appointmentPhone">Phone</label>
+              <input id="appointmentPhone" class="text-input" type="tel" placeholder="e.g. 868 712 3456" />
+            </div>
+            <div class="form-field form-field-full">
+              <label class="field-label" for="appointmentNotes">Notes</label>
+              <textarea id="appointmentNotes" class="text-input" rows="2" placeholder="Optional details"></textarea>
+            </div>
           </div>
-          <div class="form-field form-field-full">
-            <label class="field-label" for="appointmentNotes">Notes</label>
-            <textarea id="appointmentNotes" class="text-input" rows="2" placeholder="Optional details"></textarea>
-          </div>
-          <p id="appointmentMessage" class="field-error" hidden></p>
-        </form>
-      </section>
+        </section>
+
+        <p id="appointmentMessage" class="field-error" hidden></p>
+      </form>
 
       <section class="form-step form-success" data-appt-step="4" hidden aria-live="polite">
         <div class="success-check" aria-hidden="true">✓</div>
@@ -149,9 +142,7 @@
 
       <div class="modal-footer appt-wizard-footer">
         <div class="form-actions">
-          <button type="button" id="apptPrevStep" class="ghost-btn" hidden>Back</button>
-          <button type="button" id="apptNextStep" class="primary-btn" hidden>Continue</button>
-          <button type="submit" id="apptConfirmBtn" class="primary-btn" form="appointmentForm" hidden>Confirm appointment</button>
+          <button type="submit" id="apptConfirmBtn" class="primary-btn" form="appointmentForm">Book appointment</button>
           <button type="button" id="apptCreateAnother" class="ghost-btn" hidden>Create another appointment</button>
           <button type="button" id="apptGoToView" class="primary-btn" hidden>View appointments</button>
         </div>
@@ -349,7 +340,7 @@
 
   <script src="assets/products.js"></script>
   <script src="assets/shell.js"></script>
-  <script src="assets/appointments.js"></script>
+  <script src="assets/appointments.js?v=single-page-edit-1"></script>
   <script src="assets/leads.js"></script>
 </body>
 </html>

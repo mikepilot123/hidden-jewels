@@ -2569,6 +2569,11 @@ body.nav-open .view-nav { transform: translateX(0); }
 .form-step-heading .form-section-label { margin: 0 0 5px; }
 .form-step-heading h4 { margin: 0; font-family: var(--font-display); font-size: 1.18rem; }
 .form-step-heading p:last-child { margin: 5px 0 0; color: var(--text-dim); font-size: 0.88rem; line-height: 1.45; }
+
+.appt-single-form:not([hidden]) { display: flex; flex-direction: column; gap: 28px; }
+.form-section-block { padding-top: 24px; border-top: 1px solid var(--border); }
+.form-section-block:first-child { padding-top: 0; border-top: 0; }
+
 .invoice-request {
   display: flex;
   align-items: flex-start;
@@ -3867,121 +3872,7 @@ video.media-viewer-media {
     background: currentColor;
   }
 
-  #view-appointments:not([hidden]) {
-    display: flex;
-    flex-direction: column;
-    gap: clamp(8px, 1.2vh, 12px);
-    height: 100dvh;
-    max-width: none;
-    padding-top: clamp(12px, 1.8vh, 20px);
-    padding-bottom: clamp(12px, 1.8vh, 20px);
-    overflow-y: auto;
-  }
-  #view-appointments > .info-banner {
-    flex: none;
-    margin: 0;
-  }
-  #view-appointments > .appt-content-subnav {
-    display: none;
-  }
-  #view-appointments > .appt-panel[data-appt-panel-section="create"]:not([hidden]) {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-  }
-  #view-appointments .booking-wizard-card {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    max-width: none;
-    height: 100%;
-    min-height: 0;
-    margin: 0;
-    padding: clamp(14px, 1.8vh, 20px);
-    overflow: hidden;
-  }
-  #view-appointments .form-progress {
-    flex: none;
-    margin-bottom: clamp(16px, 2vh, 22px);
-  }
-  #view-appointments .booking-wizard-card .form-step:not([hidden]) {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    min-height: 0;
-  }
-  #view-appointments .form-step-heading {
-    flex: none;
-    margin-bottom: clamp(10px, 1.5vh, 16px);
-  }
   #view-appointments .booking-card {
-    flex: 1;
-    min-height: 0;
     grid-template-columns: minmax(360px, 1.75fr) minmax(190px, 0.8fr);
-  }
-  #view-appointments .booking-calendar-panel,
-  #view-appointments .booking-slots-panel {
-    min-height: 0;
-    padding: clamp(14px, 1.8vh, 20px);
-  }
-  #view-appointments .booking-calendar-panel,
-  #view-appointments .booking-slots-panel {
-    display: flex;
-    flex-direction: column;
-  }
-  #view-appointments .booking-calendar-header {
-    flex: none;
-    margin-bottom: clamp(8px, 1.3vh, 14px);
-  }
-  #view-appointments .booking-calendar-weekdays {
-    flex: none;
-    margin-bottom: 8px;
-  }
-  #view-appointments .booking-calendar-grid {
-    flex: none;
-    gap: 4px;
-    align-content: start;
-  }
-  #view-appointments .booking-day {
-    width: min(42px, 5.2vh);
-    height: min(42px, 5.2vh);
-    max-width: none;
-    max-height: none;
-    aspect-ratio: auto;
-    font-size: clamp(0.88rem, 1.9vh, 1rem);
-  }
-  #view-appointments .booking-slots-label {
-    flex: none;
-    margin-bottom: 10px;
-  }
-  #view-appointments .booking-slots-list {
-    flex: 1;
-    min-height: 0;
-    max-height: none;
-    overflow-y: auto;
-  }
-  #view-appointments .booking-slot-btn {
-    min-height: 38px;
-    padding: 8px 12px;
-    font-size: 0.86rem;
-  }
-  #view-appointments .appt-wizard-footer {
-    flex: none;
-    margin-top: clamp(10px, 1.4vh, 14px);
-    padding-top: clamp(10px, 1.4vh, 14px);
-  }
-  #view-appointments .appt-wizard-footer .form-actions {
-    margin-top: 0;
-  }
-}
-
-@media (min-width: 900px) and (max-width: 1080px) {
-  #view-appointments .booking-card {
-    grid-template-columns: 1fr;
-    overflow-y: auto;
-  }
-  #view-appointments .booking-calendar-panel {
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
   }
 }
