@@ -172,6 +172,9 @@
       btn.addEventListener("click", () => {
         selectedTime = btn.dataset.time;
         renderSlots();
+        // Everything's on one page now — once a time is picked, carry the
+        // client down to the next thing they need to fill in.
+        document.getElementById("apptItemSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     });
   }
