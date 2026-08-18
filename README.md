@@ -3,18 +3,17 @@
 A small internal web app for Hidden Jewels Co., ported from a sister repair-shop
 project. Two features:
 
-- **Appointments** — a 3-step booking wizard (pick a day/time on a calendar,
-  pick an item + staff member, add client details). Stored in the browser's
-  `localStorage`, so it's per-device.
+- **Appointments** — a single-page booking form (pick a day/time on a calendar,
+  type in the item + pick a staff member, add client details). Stored in the
+  browser's `localStorage`, so it's per-device.
 - **Leads** — a sales pipeline (New → Contacted → Quoted → Follow-up → Won/Lost)
   with search, status/follow-up filters, and per-lead quoted amounts. Synced to
   a shared Postgres database via a small Vercel API, so the whole team sees the
   same list.
 
-The item combobox in both features is powered by `assets/products.json`, a
-static snapshot of the Shopify product catalog. Refresh that file manually
-when the catalog changes meaningfully — this site has no live Shopify API
-call.
+The item/order and item/interest fields on both features are plain free-text
+inputs — staff type in whatever the appointment or lead is about, there's no
+Shopify product catalog integration.
 
 ## Local development
 

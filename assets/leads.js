@@ -16,7 +16,6 @@
   let bound = false;
   let loadedOnce = false;
   let currentStep = 1;
-  let closeLeadItemDropdown = null;
 
   function getPin() {
     try { return localStorage.getItem(LS_PIN) || ""; }
@@ -74,48 +73,6 @@
     return options.concat(STATUSES.map((status) =>
       `<option value="${esc(status)}" ${status === selected ? "selected" : ""}>${esc(status)}</option>`
     )).join("");
-  }
-
-  // ---------- item combobox (Shopify catalog snapshot) ----------
-
-  function setupItemCombobox() {
-    const combobox = $("leadItemCombobox");
-    const input = $("leadItem");
-    const dropdown = $("leadItemDropdown");
-    const toggle = $("openLeadItemDropdown");
-    if (!combobox || !input || !dropdown) return;
-
-    function close() {
-      dropdown.hidden = true;
-      input.setAttribute("aria-expanded", "false");
-      combobox.classList.remove("open");
-    }
-    closeLeadItemDropdown = close;
-
-    function openPicker() {
-      close();
-      window.HJProductPicker?.open({
-        title: "Select product for lead",
-        initialQuery: input.value.trim(),
-        onSelect(selection) {
-          input.value = selection.label;
-          const quoted = $("leadQuotedAmount");
-          if (quoted && selection.price) quoted.value = (selection.price / 100).toFixed(2);
-        },
-      });
-    }
-
-    input.addEventListener("focus", openPicker);
-    input.addEventListener("click", openPicker);
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowDown" || e.key === "Enter") {
-        e.preventDefault();
-        openPicker();
-      } else if (e.key === "Escape") {
-        close();
-      }
-    });
-    toggle?.addEventListener("click", openPicker);
   }
 
   // ---------- modal / step management ----------
@@ -177,7 +134,6 @@
     const err = $("leadStep1Error");
     if (err) err.hidden = true;
     if ($("leadFormTitle")) $("leadFormTitle").textContent = "New lead";
-    closeLeadItemDropdown?.();
     setLeadStep(1);
   }
 
@@ -216,12 +172,10 @@
     $("leadDoneBtn")?.addEventListener("click", closeAndReset);
 
     $("leadPrevStep")?.addEventListener("click", () => {
-      closeLeadItemDropdown?.();
       setLeadStep(currentStep - 1);
     });
     $("leadNextStep")?.addEventListener("click", () => {
       if (currentStep === 1 && !validateStep1()) return;
-      closeLeadItemDropdown?.();
       setLeadStep(currentStep + 1);
     });
 
@@ -244,8 +198,6 @@
     });
     $("leadList")?.addEventListener("click", handleListClick);
     $("leadList")?.addEventListener("change", handleListChange);
-
-    setupItemCombobox();
   }
 
   function populateControls() {

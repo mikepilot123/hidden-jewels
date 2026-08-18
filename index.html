@@ -97,11 +97,7 @@
           <div class="form-grid">
             <div class="form-field form-field-full">
               <label class="field-label" for="appointmentItem">Item / order *</label>
-              <div class="device-combobox" id="appointmentItemCombobox">
-                <input id="appointmentItem" class="text-input" autocomplete="off" required placeholder="Select or search for an item" aria-autocomplete="list" aria-expanded="false" aria-controls="appointmentItemDropdown" />
-                <button type="button" id="openApptItemDropdown" class="device-dropdown-btn" aria-label="Show items"><svg class="icon"><use href="#i-chevron-down"></use></svg></button>
-                <div id="appointmentItemDropdown" class="device-dropdown" role="listbox" hidden></div>
-              </div>
+              <input id="appointmentItem" class="text-input" autocomplete="off" required placeholder="e.g. 18k gold hoop earrings" />
             </div>
             <div class="form-field form-field-full">
               <label class="field-label">Staff</label>
@@ -284,11 +280,7 @@
             <div class="form-grid">
               <div class="form-field form-field-full">
                 <label class="field-label" for="leadItem">Item / interest</label>
-                <div class="device-combobox" id="leadItemCombobox">
-                  <input id="leadItem" class="text-input" autocomplete="off" placeholder="Select or search for an item" aria-autocomplete="list" aria-expanded="false" aria-controls="leadItemDropdown" />
-                  <button type="button" id="openLeadItemDropdown" class="device-dropdown-btn" aria-label="Show items"><svg class="icon"><use href="#i-chevron-down"></use></svg></button>
-                  <div id="leadItemDropdown" class="device-dropdown" role="listbox" hidden></div>
-                </div>
+                <input id="leadItem" class="text-input" autocomplete="off" placeholder="e.g. 18k gold hoop earrings" />
               </div>
               <div class="form-field form-field-full">
                 <label class="field-label" for="leadQuotedAmount">Quoted amount (TTD)</label>
@@ -338,7 +330,6 @@
     </div>
   </div>
 
-  <script src="assets/products.js"></script>
   <script src="assets/shell.js"></script>
   <script src="assets/appointments.js?v=single-page-edit-1"></script>
   <script src="assets/leads.js"></script>
