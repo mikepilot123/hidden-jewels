@@ -1,7 +1,6 @@
 /* ============================================================
    Appointments — a single-page booking form: pick a day + time on
-   a month calendar, pick the item (synced with the Shopify product
-   catalog snapshot in assets/products.json) and a staff member
+   a month calendar, type in the item and pick a staff member
    (Fresha-style chip picker, shared staff list), then add the
    client's details — all visible at once, no step navigation.
    Stored locally (no backend for the booking itself); booked slots
@@ -30,7 +29,6 @@
   let selectedTechnician = ""; // "" = Any staff
   let technicians = [];
   let bound = false;
-  let closeAppointmentItemDropdown = null;
   let editingAppointmentId = null; // set while editing an existing appointment
 
   function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
@@ -266,48 +264,6 @@
     });
   }
 
-  // ---------- item combobox (Shopify catalog snapshot) ----------
-
-  function setupItemCombobox({ comboboxId, inputId, dropdownId, toggleId, onChoose }) {
-    const combobox = $(comboboxId);
-    const input = $(inputId);
-    const dropdown = $(dropdownId);
-    const toggle = $(toggleId);
-    if (!combobox || !input || !dropdown) return null;
-
-    function close() {
-      dropdown.hidden = true;
-      input.setAttribute("aria-expanded", "false");
-      combobox.classList.remove("open");
-    }
-
-    function openPicker() {
-      close();
-      window.HJProductPicker?.open({
-        title: "Select product for appointment",
-        initialQuery: input.value.trim(),
-        onSelect(selection) {
-          input.value = selection.label;
-          if (onChoose) onChoose(selection.label, selection);
-        },
-      });
-    }
-
-    input.addEventListener("focus", openPicker);
-    input.addEventListener("click", openPicker);
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowDown" || e.key === "Enter") {
-        e.preventDefault();
-        openPicker();
-      } else if (e.key === "Escape") {
-        close();
-      }
-    });
-    toggle?.addEventListener("click", openPicker);
-
-    return close;
-  }
-
   // ---------- appointment list ----------
 
   function appointmentRowHtml(item) {
@@ -428,18 +384,10 @@
       viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1);
       renderCalendar();
     });
-    closeAppointmentItemDropdown = setupItemCombobox({
-      comboboxId: "appointmentItemCombobox",
-      inputId: "appointmentItem",
-      dropdownId: "appointmentItemDropdown",
-      toggleId: "openApptItemDropdown",
-    });
-
     const form = $("appointmentForm");
     if (form) {
       form.addEventListener("submit", (event) => {
         event.preventDefault();
-        closeAppointmentItemDropdown?.();
         const msg = $("appointmentMessage");
         const client = ($("appointmentClient")?.value || "").trim();
         const item = ($("appointmentItem")?.value || "").trim();
