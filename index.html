@@ -53,6 +53,10 @@
         <button type="button" class="appt-subnav-btn" data-appt-panel="view" aria-selected="false">View</button>
       </div>
       <button class="nav-btn" data-target="leads" role="tab" aria-selected="false"><svg class="icon"><use href="#i-user"></use></svg>Leads</button>
+      <div class="appt-sidebar-subnav" role="group" aria-label="Lead sections">
+        <button type="button" class="appt-subnav-btn active" data-lead-panel="add" aria-selected="true">Add</button>
+        <button type="button" class="appt-subnav-btn" data-lead-panel="view" aria-selected="false">View</button>
+      </div>
       <button class="nav-btn settings-nav-btn" id="settingsNavBtn" type="button" role="button"><svg class="icon"><use href="#i-gear"></use></svg>Settings</button>
     </nav>
     <div class="nav-backdrop" id="navBackdrop" hidden></div>
@@ -92,15 +96,10 @@
           </div>
         </section>
 
-        <section class="form-section-block" id="apptItemSection">
-          <div class="form-step-heading"><h4>Item and staff</h4><p>Tell us what this is about, and pick a staff member if you have a preference.</p></div>
+        <section class="form-section-block" id="apptStaffSection">
+          <div class="form-step-heading"><h4>Staff</h4><p>Pick a staff member if you have a preference.</p></div>
           <div class="form-grid">
             <div class="form-field form-field-full">
-              <label class="field-label" for="appointmentItem">Item / order *</label>
-              <input id="appointmentItem" class="text-input" autocomplete="off" required placeholder="e.g. 18k gold hoop earrings" />
-            </div>
-            <div class="form-field form-field-full">
-              <label class="field-label">Staff</label>
               <div id="technicianPicker" class="technician-picker"></div>
             </div>
           </div>
@@ -157,39 +156,136 @@
   <!-- ============ LEADS VIEW ============ -->
   <main class="container view" id="view-leads" hidden>
     <p class="info-banner">Track prospects, quotes, and follow-ups.</p>
-    <p class="status-line">
-      <span id="leadsStatusDot" class="status-dot stale"></span>
-      <span id="leadsUpdated">Loading leads…</span>
-    </p>
 
-    <section class="leads-workspace" aria-labelledby="leadsTitle">
-      <div class="leads-topbar">
-        <div class="leads-searchbar">
-          <svg class="icon"><use href="#i-search"></use></svg>
-          <input id="leadSearch" type="search" inputmode="search" autocomplete="off" placeholder="Search leads by customer, phone, item…" aria-label="Search leads" />
-          <button id="clearLeadSearch" class="inventory-clear-search" aria-label="Clear lead search" hidden><svg class="icon"><use href="#i-xmark"></use></svg></button>
+    <div class="appt-subnav appt-content-subnav" role="tablist" aria-label="Leads sections">
+      <button type="button" class="appt-subnav-btn active" data-lead-panel="add" role="tab" aria-selected="true">Add a lead</button>
+      <button type="button" class="appt-subnav-btn" data-lead-panel="view" role="tab" aria-selected="false">View leads</button>
+    </div>
+
+    <section class="appt-panel" data-lead-panel-section="add">
+      <section class="booking-wizard-card">
+        <form id="leadForm" autocomplete="off">
+          <section class="form-section-block">
+            <div class="form-step-heading"><h4 id="leadFormTitle">New lead</h4><p>Who is this lead and how did they reach you?</p></div>
+            <div class="form-grid">
+              <div class="form-field form-field-full">
+                <label class="field-label" for="leadName">Name</label>
+                <input id="leadName" class="text-input" placeholder="e.g. Anita Singh" autocomplete="name" />
+              </div>
+              <div class="form-field form-field-full">
+                <label class="field-label" for="leadPhone">Phone</label>
+                <input id="leadPhone" class="text-input" type="tel" placeholder="e.g. 868 712 3456" autocomplete="tel" />
+              </div>
+              <div class="form-field form-field-full">
+                <label class="field-label" for="leadEmail">Email</label>
+                <input id="leadEmail" class="text-input" type="email" placeholder="e.g. anita@example.com" autocomplete="email" />
+              </div>
+              <div class="form-field form-field-full">
+                <label class="field-label" for="leadSource">Source</label>
+                <select id="leadSource" class="text-input select-input" aria-label="Lead source">
+                  <option value="">How did they find you?</option>
+                  <option value="Walk-in">Walk-in</option>
+                  <option value="Phone">Phone</option>
+                  <option value="WhatsApp">WhatsApp</option>
+                  <option value="Instagram">Instagram</option>
+                  <option value="Referral">Referral</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section-block">
+            <div class="form-step-heading"><h4>Interest</h4><p>What are they interested in, and what did you quote?</p></div>
+            <div class="form-grid">
+              <div class="form-field form-field-full">
+                <label class="field-label" for="leadItem">Item / interest</label>
+                <input id="leadItem" class="text-input" autocomplete="off" placeholder="e.g. 18k gold hoop earrings" />
+              </div>
+              <div class="form-field form-field-full">
+                <label class="field-label" for="leadQuotedAmount">Quoted amount (TTD)</label>
+                <input id="leadQuotedAmount" class="text-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 450.00" />
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section-block">
+            <div class="form-step-heading"><h4>Status and follow-up</h4><p>Where is this lead in the pipeline, and when should you follow up?</p></div>
+            <div class="form-grid">
+              <div class="form-field form-field-full">
+                <label class="field-label" for="leadStatus">Status</label>
+                <select id="leadStatus" class="text-input select-input" aria-label="Lead status"></select>
+              </div>
+              <div class="form-field form-field-full">
+                <label class="field-label" for="leadFollowUpDate">Follow-up date</label>
+                <input id="leadFollowUpDate" class="text-input" type="date" aria-label="Follow-up date" />
+              </div>
+              <div class="form-field form-field-full">
+                <label class="field-label" for="leadNotes">Notes</label>
+                <textarea id="leadNotes" class="text-input" rows="3" placeholder="Extra context, conversation history, next action…"></textarea>
+              </div>
+            </div>
+          </section>
+
+          <p id="leadMessage" class="field-error" aria-live="polite" hidden></p>
+          <input id="leadId" type="hidden" />
+        </form>
+
+        <section class="form-step form-success" data-lead-step="success" hidden aria-live="polite">
+          <div class="success-check" aria-hidden="true">✓</div>
+          <div class="form-step-heading">
+            <p class="form-section-label">Lead saved</p>
+            <h4 id="leadSuccessTitle">Lead added to pipeline</h4>
+            <p id="leadSuccessMessage"></p>
+          </div>
+        </section>
+
+        <div class="modal-footer appt-wizard-footer">
+          <div class="form-actions">
+            <button type="button" id="leadSubmit" class="primary-btn">Save lead</button>
+            <button type="button" id="leadCancelBtn" class="ghost-btn" hidden>Cancel edit</button>
+            <button type="button" id="leadAddAnother" class="ghost-btn" hidden>Add another lead</button>
+            <button type="button" id="leadGoToView" class="primary-btn" hidden>View leads</button>
+          </div>
         </div>
-        <select id="leadStatusFilter" class="text-input select-input" aria-label="Filter leads by status"></select>
-        <select id="leadFollowUpFilter" class="text-input select-input" aria-label="Filter leads by follow-up">
-          <option value="all">All follow-ups</option>
-          <option value="due">Due or overdue</option>
-          <option value="today">Due today</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="none">No follow-up date</option>
-        </select>
-        <button type="button" id="leadNewBtn" class="primary-btn"><svg class="icon"><use href="#i-plus"></use></svg>New lead</button>
-        <button type="button" id="leadRefresh" class="ghost-btn icon-btn" aria-label="Refresh leads"><svg class="icon"><use href="#i-refresh"></use></svg></button>
-      </div>
+      </section>
+    </section>
 
-      <div class="leads-heading-row">
-        <div>
-          <p class="dashboard-eyebrow">Pipeline</p>
-          <h2 id="leadsTitle">Lead tracker</h2>
+    <section class="appt-panel" data-lead-panel-section="view" hidden>
+      <p class="status-line">
+        <span id="leadsStatusDot" class="status-dot stale"></span>
+        <span id="leadsUpdated">Loading leads…</span>
+      </p>
+
+      <section class="leads-workspace" aria-labelledby="leadsTitle">
+        <div class="leads-topbar">
+          <div class="leads-searchbar">
+            <svg class="icon"><use href="#i-search"></use></svg>
+            <input id="leadSearch" type="search" inputmode="search" autocomplete="off" placeholder="Search leads by customer, phone, item…" aria-label="Search leads" />
+            <button id="clearLeadSearch" class="inventory-clear-search" aria-label="Clear lead search" hidden><svg class="icon"><use href="#i-xmark"></use></svg></button>
+          </div>
+          <select id="leadStatusFilter" class="text-input select-input" aria-label="Filter leads by status"></select>
+          <select id="leadFollowUpFilter" class="text-input select-input" aria-label="Filter leads by follow-up">
+            <option value="all">All follow-ups</option>
+            <option value="due">Due or overdue</option>
+            <option value="today">Due today</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="none">No follow-up date</option>
+          </select>
+          <button type="button" id="leadNewBtn" class="primary-btn"><svg class="icon"><use href="#i-plus"></use></svg>New lead</button>
+          <button type="button" id="leadRefresh" class="ghost-btn icon-btn" aria-label="Refresh leads"><svg class="icon"><use href="#i-refresh"></use></svg></button>
         </div>
-        <p id="leadCount" class="result-count"></p>
-      </div>
 
-      <div id="leadList" class="ops-list leads-list" aria-live="polite"></div>
+        <div class="leads-heading-row">
+          <div>
+            <p class="dashboard-eyebrow">Pipeline</p>
+            <h2 id="leadsTitle">Lead tracker</h2>
+          </div>
+          <p id="leadCount" class="result-count"></p>
+        </div>
+
+        <div id="leadList" class="ops-list leads-list" aria-live="polite"></div>
+      </section>
     </section>
   </main>
 
@@ -225,110 +321,6 @@
   <footer class="app-footer">
     <p>Hidden Jewels Co. · Internal team use</p>
   </footer>
-
-  <!-- Lead form modal -->
-  <div id="leadFormModal" class="modal-backdrop" hidden>
-    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="leadFormTitle">
-      <div class="modal-header">
-        <h3 id="leadFormTitle">New lead</h3>
-        <button type="button" id="closeLeadFormModal" class="modal-close" aria-label="Close"><svg class="icon"><use href="#i-xmark"></use></svg></button>
-      </div>
-      <div class="modal-body">
-        <form id="leadForm" autocomplete="off">
-          <input id="leadId" type="hidden" />
-          <div class="form-progress" aria-label="Lead entry progress">
-            <span class="form-progress-step active" data-lead-progress-step="1">1<span>Customer</span></span>
-            <span class="form-progress-line"></span>
-            <span class="form-progress-step" data-lead-progress-step="2">2<span>Item</span></span>
-            <span class="form-progress-line"></span>
-            <span class="form-progress-step" data-lead-progress-step="3">3<span>Follow-up</span></span>
-          </div>
-
-          <section class="form-step" data-lead-step="1">
-            <div class="form-step-heading"><p class="form-section-label">Step 1</p><h4>Customer details</h4><p>Who is this lead and how did they reach you?</p></div>
-            <div class="form-grid">
-              <div class="form-field form-field-full">
-                <label class="field-label" for="leadName">Name</label>
-                <input id="leadName" class="text-input" placeholder="e.g. Anita Singh" autocomplete="name" />
-              </div>
-              <div class="form-field form-field-full">
-                <label class="field-label" for="leadPhone">Phone</label>
-                <input id="leadPhone" class="text-input" type="tel" placeholder="e.g. 868 712 3456" autocomplete="tel" />
-              </div>
-              <div class="form-field form-field-full">
-                <label class="field-label" for="leadEmail">Email</label>
-                <input id="leadEmail" class="text-input" type="email" placeholder="e.g. anita@example.com" autocomplete="email" />
-              </div>
-              <div class="form-field form-field-full">
-                <label class="field-label" for="leadSource">Source</label>
-                <select id="leadSource" class="text-input select-input" aria-label="Lead source">
-                  <option value="">How did they find you?</option>
-                  <option value="Walk-in">Walk-in</option>
-                  <option value="Phone">Phone</option>
-                  <option value="WhatsApp">WhatsApp</option>
-                  <option value="Instagram">Instagram</option>
-                  <option value="Referral">Referral</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            </div>
-            <p id="leadStep1Error" class="field-error" hidden></p>
-          </section>
-
-          <section class="form-step" data-lead-step="2" hidden>
-            <div class="form-step-heading"><p class="form-section-label">Step 2</p><h4>Item and interest</h4><p>What are they interested in?</p></div>
-            <div class="form-grid">
-              <div class="form-field form-field-full">
-                <label class="field-label" for="leadItem">Item / interest</label>
-                <input id="leadItem" class="text-input" autocomplete="off" placeholder="e.g. 18k gold hoop earrings" />
-              </div>
-              <div class="form-field form-field-full">
-                <label class="field-label" for="leadQuotedAmount">Quoted amount (TTD)</label>
-                <input id="leadQuotedAmount" class="text-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 450.00" />
-              </div>
-            </div>
-          </section>
-
-          <section class="form-step" data-lead-step="3" hidden>
-            <div class="form-step-heading"><p class="form-section-label">Step 3</p><h4>Status and follow-up</h4><p>Where is this lead in the pipeline, and when should you follow up?</p></div>
-            <div class="form-grid">
-              <div class="form-field form-field-full">
-                <label class="field-label" for="leadStatus">Status</label>
-                <select id="leadStatus" class="text-input select-input" aria-label="Lead status"></select>
-              </div>
-              <div class="form-field form-field-full">
-                <label class="field-label" for="leadFollowUpDate">Follow-up date</label>
-                <input id="leadFollowUpDate" class="text-input" type="date" aria-label="Follow-up date" />
-              </div>
-              <div class="form-field form-field-full">
-                <label class="field-label" for="leadNotes">Notes</label>
-                <textarea id="leadNotes" class="text-input" rows="3" placeholder="Extra context, conversation history, next action…"></textarea>
-              </div>
-            </div>
-            <p id="leadMessage" class="field-error" aria-live="polite" hidden></p>
-          </section>
-
-          <section class="form-step form-success" data-lead-step="4" hidden aria-live="polite">
-            <div class="success-check" aria-hidden="true">✓</div>
-            <div class="form-step-heading">
-              <p class="form-section-label">Lead saved</p>
-              <h4 id="leadSuccessTitle">Lead added to pipeline</h4>
-              <p id="leadSuccessMessage"></p>
-            </div>
-          </section>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <div class="form-actions">
-          <button type="button" id="leadCancelBtn" class="ghost-btn">Cancel</button>
-          <button type="button" id="leadPrevStep" class="ghost-btn" hidden>Back</button>
-          <button type="button" id="leadNextStep" class="primary-btn">Continue</button>
-          <button type="button" id="leadSubmit" class="primary-btn" hidden>Save lead</button>
-          <button type="button" id="leadDoneBtn" class="primary-btn" hidden>Done</button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <script src="assets/shell.js"></script>
   <script src="assets/appointments.js?v=single-page-edit-1"></script>

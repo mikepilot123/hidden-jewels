@@ -15,7 +15,6 @@
   let leads = [];
   let bound = false;
   let loadedOnce = false;
-  let currentStep = 1;
 
   function getPin() {
     try { return localStorage.getItem(LS_PIN) || ""; }
@@ -75,77 +74,60 @@
     )).join("");
   }
 
-  // ---------- modal / step management ----------
+  // ---------- panel / form management ----------
 
-  function openModal() {
-    const modal = $("leadFormModal");
-    if (modal) modal.hidden = false;
-    document.body.classList.add("modal-open");
+  // Leads mirror Appointments: an "Add" panel holding one continuous form
+  // (no step navigation) and a "View" panel with the searchable pipeline.
+  function setLeadPanel(panel) {
+    document.querySelectorAll("[data-lead-panel-section]").forEach((section) => {
+      section.hidden = section.dataset.leadPanelSection !== panel;
+    });
+    document.querySelectorAll("[data-lead-panel]").forEach((btn) => {
+      const active = btn.dataset.leadPanel === panel;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-selected", active ? "true" : "false");
+    });
   }
 
-  function closeModal() {
-    const modal = $("leadFormModal");
-    if (modal) modal.hidden = true;
-    document.body.classList.remove("modal-open");
-  }
-
-  function setLeadStep(n) {
-    currentStep = n;
-    document.querySelectorAll("[data-lead-step]").forEach((section) => {
-      section.hidden = String(section.dataset.leadStep) !== String(n);
-    });
-    document.querySelectorAll("[data-lead-progress-step]").forEach((el) => {
-      const stepNum = parseInt(el.dataset.leadProgressStep, 10);
-      el.classList.toggle("active", stepNum === n);
-      el.classList.toggle("done", stepNum < n);
-    });
-    const isSuccess = n === 4;
-    const prev = $("leadPrevStep");
-    const next = $("leadNextStep");
-    const save = $("leadSubmit");
-    const done = $("leadDoneBtn");
+  // Swaps the whole form out for the confirmation view and back.
+  function setFormVisible(showForm) {
+    const form = $("leadForm");
+    const success = document.querySelector('[data-lead-step="success"]');
+    if (form) form.hidden = !showForm;
+    if (success) success.hidden = showForm;
+    const submit = $("leadSubmit");
     const cancel = $("leadCancelBtn");
-    if (prev) prev.hidden = n <= 1 || isSuccess;
-    if (next) next.hidden = n >= 3 || isSuccess;
-    if (save) save.hidden = n !== 3;
-    if (done) done.hidden = !isSuccess;
-    if (cancel) cancel.hidden = isSuccess;
-  }
-
-  function validateStep1() {
-    const name = ($("leadName")?.value || "").trim();
-    const phone = ($("leadPhone")?.value || "").trim();
-    const err = $("leadStep1Error");
-    if (!name && !phone) {
-      if (err) { err.textContent = "Add a name or phone number to continue."; err.hidden = false; }
-      return false;
+    const addAnother = $("leadAddAnother");
+    const goToView = $("leadGoToView");
+    const isEditing = !!($("leadId")?.value);
+    if (submit) {
+      submit.hidden = !showForm;
+      submit.textContent = isEditing ? "Save changes" : "Save lead";
     }
-    if (err) err.hidden = true;
-    return true;
+    if (cancel) cancel.hidden = !showForm || !isEditing;
+    if (addAnother) addAnother.hidden = showForm;
+    if (goToView) goToView.hidden = showForm;
   }
 
-  function closeAndReset() {
-    closeModal();
+  function resetForm() {
     $("leadForm")?.reset();
     if ($("leadStatus")) $("leadStatus").value = "New";
     if ($("leadId")) $("leadId").value = "";
     const msg = $("leadMessage");
     if (msg) { msg.textContent = ""; msg.hidden = true; }
-    const err = $("leadStep1Error");
-    if (err) err.hidden = true;
     if ($("leadFormTitle")) $("leadFormTitle").textContent = "New lead";
-    setLeadStep(1);
+    setFormVisible(true);
   }
 
   function openNewLeadForm() {
-    closeAndReset();
-    openModal();
+    resetForm();
+    setLeadPanel("add");
     $("leadName")?.focus();
   }
 
   function editLead(lead) {
     if (!lead) return;
-    closeAndReset();
+    resetForm();
     if ($("leadFormTitle")) $("leadFormTitle").textContent = "Edit lead";
     $("leadId").value = lead.id || "";
     $("leadName").value = lead.customerName || "";
@@ -157,7 +139,8 @@
     $("leadStatus").value = STATUSES.includes(lead.status) ? lead.status : "New";
     $("leadFollowUpDate").value = lead.followUpDate || "";
     $("leadNotes").value = lead.notes || "";
-    openModal();
+    setFormVisible(true);
+    setLeadPanel("add");
     $("leadName")?.focus();
   }
 
@@ -165,23 +148,20 @@
     if (bound) return;
     bound = true;
 
+    document.querySelectorAll("[data-lead-panel]").forEach((btn) => {
+      btn.addEventListener("click", () => setLeadPanel(btn.dataset.leadPanel));
+    });
+
     $("leadSubmit")?.addEventListener("click", saveLead);
     $("leadNewBtn")?.addEventListener("click", openNewLeadForm);
-    $("closeLeadFormModal")?.addEventListener("click", closeAndReset);
-    $("leadCancelBtn")?.addEventListener("click", closeAndReset);
-    $("leadDoneBtn")?.addEventListener("click", closeAndReset);
-
-    $("leadPrevStep")?.addEventListener("click", () => {
-      setLeadStep(currentStep - 1);
-    });
-    $("leadNextStep")?.addEventListener("click", () => {
-      if (currentStep === 1 && !validateStep1()) return;
-      setLeadStep(currentStep + 1);
+    $("leadCancelBtn")?.addEventListener("click", resetForm);
+    $("leadAddAnother")?.addEventListener("click", openNewLeadForm);
+    $("leadGoToView")?.addEventListener("click", () => {
+      resetForm();
+      setLeadPanel("view");
     });
 
-    $("leadFormModal")?.addEventListener("click", (e) => {
-      if (e.target === $("leadFormModal")) closeAndReset();
-    });
+    $("leadForm")?.addEventListener("submit", saveLead);
 
     $("leadRefresh")?.addEventListener("click", () => loadLeads({ force: true }));
     $("leadStatusFilter")?.addEventListener("change", render);
@@ -208,8 +188,10 @@
   }
 
   async function loadLeads({ force = false } = {}) {
+    const firstRun = !bound;
     bindOnce();
     populateControls();
+    if (firstRun) setFormVisible(true);
     if (!getPin()) {
       leads = [];
       setStatus("stale", "Save the team PIN in Settings before loading leads.");
@@ -249,7 +231,7 @@
   }
 
   async function saveLead(event) {
-    event.preventDefault();
+    event?.preventDefault();
     const msg = $("leadMessage");
     const submit = $("leadSubmit");
     const payload = formPayload();
@@ -274,7 +256,8 @@
       const successMsg = $("leadSuccessMessage");
       if (title) title.textContent = isNew ? "Lead added to pipeline" : "Lead updated";
       if (successMsg) successMsg.textContent = `${data.lead?.customerName || "Lead"} has been ${isNew ? "added" : "updated"} successfully.`;
-      setLeadStep(4);
+      if ($("leadId")) $("leadId").value = "";
+      setFormVisible(false);
     } catch (err) {
       if (msg) { msg.textContent = err.message; msg.hidden = false; }
       setStatus("error", "Lead sync failed");
