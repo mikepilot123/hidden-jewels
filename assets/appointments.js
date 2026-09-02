@@ -1,8 +1,8 @@
 /* ============================================================
    Appointments — a single-page booking form: pick a day + time on
-   a month calendar, type in the item and pick a staff member
-   (Fresha-style chip picker, shared staff list), then add the
-   client's details — all visible at once, no step navigation.
+   a month calendar, pick a staff member (Fresha-style chip picker,
+   shared staff list), then add the client's details — all visible
+   at once, no step navigation.
    Stored locally (no backend for the booking itself); booked slots
    are excluded from the picker so two clients can't be double-
    booked into the same time.
@@ -134,7 +134,7 @@
   function bookedAppointmentRowHtml(item) {
     return `<div class="booking-existing-row">
       <span class="booking-existing-time">${esc(minutesToLabel(timeToMinutes(item.time)))}</span>
-      <span class="booking-existing-details">${esc(item.client)}${item.item ? " · " + esc(item.item) : ""}${item.technician ? " · " + esc(item.technician) : ""}</span>
+      <span class="booking-existing-details">${esc(item.client)}${item.technician ? " · " + esc(item.technician) : ""}</span>
     </div>`;
   }
 
@@ -172,7 +172,7 @@
         renderSlots();
         // Everything's on one page now — once a time is picked, carry the
         // client down to the next thing they need to fill in.
-        document.getElementById("apptItemSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        document.getElementById("apptStaffSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     });
   }
@@ -184,7 +184,7 @@
 
   // ---------- single-page form / success toggle ----------
 
-  // The booking form (When + Item/staff + Details) is one continuous page,
+  // The booking form (When + Staff + Details) is one continuous page,
   // not a multi-step wizard — this just swaps the whole form out for the
   // confirmation view and back, and updates the submit button's label.
   function setFormVisible(showForm) {
@@ -210,8 +210,6 @@
     editingAppointmentId = null;
     const form = $("appointmentForm");
     if (form) form.reset();
-    const itemInput = $("appointmentItem");
-    if (itemInput) itemInput.value = "";
     renderTechnicianPicker();
     renderCalendar();
     renderSlots();
@@ -271,7 +269,7 @@
       <article class="booking-row ${item.status === "completed" ? "is-completed" : ""}">
         <div class="booking-row-main">
           <strong>${esc(item.client)}</strong>
-          <p>${esc(item.item)}${item.technician ? " · Assigned to " + esc(item.technician) : ""}</p>
+          <p>${item.technician ? "Assigned to " + esc(item.technician) : "Any staff"}</p>
           <small>${esc(formatDateTime(item.date, item.time))}${item.phone ? " · " + esc(item.phone) : ""}</small>
         </div>
         <div class="booking-row-actions">
@@ -325,8 +323,6 @@
     renderCalendar();
     renderSlots();
     renderTechnicianPicker();
-    const itemInput = $("appointmentItem");
-    if (itemInput) itemInput.value = appointment.item || "";
     const clientInput = $("appointmentClient");
     if (clientInput) clientInput.value = appointment.client || "";
     const phoneInput = $("appointmentPhone");
@@ -390,13 +386,8 @@
         event.preventDefault();
         const msg = $("appointmentMessage");
         const client = ($("appointmentClient")?.value || "").trim();
-        const item = ($("appointmentItem")?.value || "").trim();
         if (!selectedDate || !selectedTime) {
           if (msg) { msg.textContent = "Pick a day and time."; msg.hidden = false; }
-          return;
-        }
-        if (!item) {
-          if (msg) { msg.textContent = "Add the item or order."; msg.hidden = false; }
           return;
         }
         if (!client) {
@@ -409,7 +400,6 @@
           id: isEdit ? editingAppointmentId : uid(),
           client,
           phone: ($("appointmentPhone")?.value || "").trim(),
-          item,
           technician: selectedTechnician || "",
           date: selectedDate,
           time: selectedTime,
