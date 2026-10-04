@@ -3634,3 +3634,75 @@ video.media-viewer-media {
   .preorder-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .preorder-load-error { margin: 0 0 12px; }
+
+/* ---- Preorder ring picker (Shopify catalog) --------------------------- */
+.ring-picker { position: relative; }
+.ring-picker-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-dim); pointer-events: none; }
+.ring-picker .text-input { padding-left: 42px; }
+.ring-results {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 340px;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 4px;
+}
+.ring-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+}
+.ring-result.is-active, .ring-result:hover { background: var(--accent-soft); }
+.ring-result img, .ring-result-noimg {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--bg-soft);
+  display: grid;
+  place-items: center;
+}
+.ring-result-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ring-result-title { font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ring-result-meta { font-size: 0.8rem; color: var(--text-dim); }
+.ring-result-meta em { color: var(--danger); font-style: normal; }
+.ring-results-empty { margin: 0; padding: 10px; font-size: 0.85rem; color: var(--text-dim); }
+.ring-catalog-status { margin: 6px 0 0; }
+.ring-selected {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+.ring-selected-head { display: flex; align-items: center; gap: 12px; }
+.ring-selected-head img { width: 64px; height: 64px; flex: none; border-radius: var(--radius-sm); object-fit: cover; background: var(--card); }
+.ring-selected-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.ring-selected-text a { font-size: 0.8rem; color: var(--accent); }
+.ring-stock { font-size: 0.82rem; color: var(--price); }
+.ring-stock.is-out { color: var(--danger); }
+.ring-clear { flex: none; }
+.ring-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 12px; }
+.ring-option { display: flex; flex-direction: column; gap: 4px; }
+.lead-avatar.has-image { padding: 0; overflow: hidden; }
+.lead-avatar.has-image img { width: 100%; height: 100%; object-fit: cover; }
+@media (max-width: 640px) {
+  .ring-selected-head { flex-wrap: wrap; }
+  .ring-clear { width: 100%; }
+}

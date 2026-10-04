@@ -2,6 +2,7 @@ import { listLeads, addLead, updateLead, deleteLead } from "../lib/leads.js";
 import { listTechnicians, addTechnician, deleteTechnician } from "../lib/technicians.js";
 import { listAppointments, addAppointment, updateAppointment, deleteAppointment } from "../lib/appointments.js";
 import { listPreorders, addPreorder, updatePreorder, deletePreorder } from "../lib/preorders.js";
+import { listShopifyProducts } from "../lib/shopify.js";
 import { ensureSchema } from "../lib/db.js";
 
 // One endpoint for leads, appointments, preorders and staff. Same shape as
@@ -55,6 +56,9 @@ export default async function handler(req, res) {
     }
     if (action === "deleteAppointment") {
       return res.status(200).json({ ok: true, deletedId: await deleteAppointment(body) });
+    }
+    if (action === "listShopifyProducts") {
+      return res.status(200).json({ ok: true, products: await listShopifyProducts({ refresh: !!body.refresh }) });
     }
     if (action === "listPreorders") {
       return res.status(200).json({ ok: true, preorders: await listPreorders() });

@@ -18,6 +18,9 @@ every minute and whenever the app comes back to the foreground:
   size, price, amount paid (deposit) and the balance still owed, plus a status
   (To order → Ordered → Arrived → Collected, or Cancelled) so it's clear which
   rings still need ordering. Further payments can be added from the list.
+  The ring field searches the live Hidden Jewels Shopify store: picking a
+  product fills in its name, size and price for the chosen variant (custom
+  rings can still be typed in).
 
 The lead's item/interest field is plain free text — staff type in whatever the
 lead is about, there's no Shopify product catalog integration.
@@ -40,6 +43,7 @@ project:
 ```txt
 DATABASE_URL       # Neon Postgres connection string
 INTAKE_PIN         # shared team PIN gating the API
+SHOPIFY_STORE_DOMAIN  # optional, defaults to hiddenjewelsco.com
 ```
 
 ## Deploying

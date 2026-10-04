@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <!-- Bump ?v= on every asset below whenever one of them changes, otherwise
        returning browsers keep serving the previous copy from cache. -->
-  <link rel="stylesheet" href="assets/style.css?v=completed-appts-1" />
+  <link rel="stylesheet" href="assets/style.css?v=ring-picker-1" />
 </head>
 <body>
   <svg class="icon-sprite" aria-hidden="true" focusable="false">
@@ -342,11 +342,17 @@
           </section>
 
           <section class="form-section-block">
-            <div class="form-step-heading"><h4>Ring</h4><p>Which ring, and what size?</p></div>
+            <div class="form-step-heading"><h4>Ring</h4><p>Search the Hidden Jewels store, or type a custom ring.</p></div>
             <div class="form-grid">
               <div class="form-field form-field-full">
                 <label class="field-label" for="preorderRing">Ring *</label>
-                <input id="preorderRing" class="text-input" placeholder="e.g. 14k oval solitaire, 1ct lab diamond" />
+                <div class="ring-picker">
+                  <svg class="icon ring-picker-icon"><use href="#i-search"></use></svg>
+                  <input id="preorderRing" class="text-input" placeholder="Search the store, e.g. True Love" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ringResults" />
+                  <div id="ringResults" class="ring-results" role="listbox" hidden></div>
+                </div>
+                <p id="ringCatalogStatus" class="settings-help ring-catalog-status"></p>
+                <div id="ringSelected" class="ring-selected" hidden></div>
               </div>
               <div class="form-field form-field-full">
                 <label class="field-label" for="preorderSize">Size</label>
@@ -476,9 +482,9 @@
     <p>Hidden Jewels Co. · Internal team use</p>
   </footer>
 
-  <script src="assets/shell.js?v=completed-appts-1"></script>
-  <script src="assets/appointments.js?v=completed-appts-1"></script>
-  <script src="assets/leads.js?v=completed-appts-1"></script>
-  <script src="assets/preorders.js?v=completed-appts-1"></script>
+  <script src="assets/shell.js?v=ring-picker-1"></script>
+  <script src="assets/appointments.js?v=ring-picker-1"></script>
+  <script src="assets/leads.js?v=ring-picker-1"></script>
+  <script src="assets/preorders.js?v=ring-picker-1"></script>
 </body>
 </html>
