@@ -387,21 +387,48 @@
 
   // ---------- appointment list ----------
 
+  // Same card layout as the Leads list: tone stripe + avatar, name with a
+  // status pill, contact line, detail chips and notes, actions on the side.
+  function appointmentState(item) {
+    if (item.status === "completed") return { key: "completed", label: "Completed" };
+    const today = todayISO();
+    if (item.date === today) return { key: "today", label: "Today" };
+    if (item.date < today) return { key: "overdue", label: "Not marked done" };
+    return { key: "scheduled", label: "Scheduled" };
+  }
+
   function appointmentRowHtml(item) {
-    return `
-      <article class="booking-row ${item.status === "completed" ? "is-completed" : ""} ${item.id === editingAppointmentId ? "is-editing" : ""}">
-        <div class="booking-row-main">
-          <strong>${esc(item.client)}</strong>
-          <p>${item.technician ? "Assigned to " + esc(item.technician) : "Any staff"}</p>
-          <small>${esc(formatDateTime(item.date, item.time))}${item.phone ? " · " + esc(item.phone) : ""}</small>
+    const state = appointmentState(item);
+    const phone = item.phone
+      ? `<a class="ticket-phone" href="tel:${esc(item.phone)}"><svg class="icon ticket-phone-icon"><use href="#i-phone"></use></svg>${esc(item.phone)}</a>`
+      : `<span class="ticket-phone no-phone">No phone</span>`;
+    const [y, m, d] = item.date.split("-").map(Number);
+    const dayLabel = new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+    return `<article class="lead-card appt-card appt-state-${state.key}${item.id === editingAppointmentId ? " is-editing" : ""}">
+      <div class="lead-avatar appt-avatar" aria-hidden="true">${esc(initials(item.client))}</div>
+      <div class="lead-card-main">
+        <div class="lead-card-top">
+          <div class="lead-card-title">${esc(item.client || "Unnamed client")}</div>
+          <span class="lead-status-pill">${esc(state.label)}</span>
         </div>
-        <div class="booking-row-actions">
+        <div class="lead-card-sub">${esc(dayLabel)} at ${esc(minutesToLabel(timeToMinutes(item.time)))}</div>
+        <div class="lead-phone-wrap">${phone}</div>
+        <div class="lead-detail-grid">
+          <div class="lead-detail${state.key === "today" || state.key === "overdue" ? " is-due" : ""}"><svg class="icon"><use href="#i-calendar"></use></svg><span>${esc(formatDateTime(item.date, item.time))}</span></div>
+          <div class="lead-detail"><svg class="icon"><use href="#i-user"></use></svg><span>${item.technician ? esc(item.technician) : "Any staff"}</span></div>
+        </div>
+        ${item.notes ? `<div class="lead-notes"><svg class="icon"><use href="#i-note"></use></svg><span>${esc(item.notes)}</span></div>` : ""}
+      </div>
+      <div class="lead-card-side">
+        <div class="lead-card-actions">
           <button type="button" data-edit="${esc(item.id)}">Edit</button>
-          <button type="button" data-complete="${esc(item.id)}">${item.status === "completed" ? "Reopen" : "Done"}</button>
           <button type="button" class="danger-text" data-delete="${esc(item.id)}">Delete</button>
         </div>
-      </article>
-    `;
+        <button type="button" class="appt-done-btn${item.status === "completed" ? " is-reopen" : ""}" data-complete="${esc(item.id)}">
+          <svg class="icon"><use href="#${item.status === "completed" ? "i-refresh" : "i-check"}"></use></svg>${item.status === "completed" ? "Reopen" : "Mark done"}
+        </button>
+      </div>
+    </article>`;
   }
 
   function bindRowActions(list) {

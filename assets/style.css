@@ -3706,3 +3706,33 @@ video.media-viewer-media {
   .ring-selected-head { flex-wrap: wrap; }
   .ring-clear { width: 100%; }
 }
+
+/* ---- Appointment cards (same layout as lead cards) -------------------- */
+.appt-state-scheduled { --lead-tone: #416aa3; }
+.appt-state-today { --lead-tone: var(--accent); }
+.appt-state-overdue { --lead-tone: var(--danger); }
+.appt-state-completed { --lead-tone: var(--price); }
+.appt-state-overdue .lead-status-pill { background: #fff5f5; color: var(--danger); }
+.appt-state-completed .lead-status-pill { background: #dff5ec; color: var(--price); }
+.appt-avatar { font-weight: 700; font-size: 1rem; letter-spacing: 0.02em; }
+.appt-card.is-editing { box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow); border-color: var(--accent); }
+.appt-done-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--price);
+  border-radius: var(--radius-sm);
+  background: #ecfdf5;
+  color: var(--price);
+  font: 600 0.86rem var(--font-display);
+  cursor: pointer;
+}
+.appt-done-btn .icon { width: 16px; height: 16px; }
+.appt-done-btn:hover { background: #dff5ec; }
+.appt-done-btn.is-reopen { border-color: var(--border); background: var(--card); color: var(--text-dim); }
+.appt-done-btn.is-reopen:hover { border-color: var(--accent); color: var(--accent); }
+.appt-list .booking-list-subtitle { margin: 12px 0 0; }
