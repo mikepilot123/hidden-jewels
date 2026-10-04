@@ -476,22 +476,36 @@
     $("appointmentForm")?.scrollIntoView({ block: "start" });
   }
 
+  // View = everything still scheduled (upcoming first, then past visits
+  // nobody has marked Done yet); Completed = visits marked Done, newest
+  // first.
   function renderList() {
-    const list = $("appointmentList");
-    if (!list) return;
     const today = todayISO();
     const byTime = (a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`);
     const all = readAppointments().filter((a) => a.status !== "cancelled");
-    const upcoming = all.filter((a) => a.date >= today && a.status !== "completed").sort(byTime);
-    const past = all.filter((a) => a.date < today || a.status === "completed").sort((a, b) => byTime(b, a));
-    let html = upcoming.length
-      ? upcoming.map(appointmentRowHtml).join("")
-      : `<p class="booking-empty">No upcoming appointments.</p>`;
-    if (past.length) {
-      html += `<h3 class="booking-list-subtitle">Past &amp; completed</h3>` + past.map(appointmentRowHtml).join("");
+    const scheduled = all.filter((a) => a.status !== "completed");
+    const upcoming = scheduled.filter((a) => a.date >= today).sort(byTime);
+    const overdue = scheduled.filter((a) => a.date < today).sort((a, b) => byTime(b, a));
+    const completed = all.filter((a) => a.status === "completed").sort((a, b) => byTime(b, a));
+
+    const list = $("appointmentList");
+    if (list) {
+      let html = upcoming.length
+        ? upcoming.map(appointmentRowHtml).join("")
+        : `<p class="booking-empty">No upcoming appointments.</p>`;
+      if (overdue.length) {
+        html += `<h3 class="booking-list-subtitle">Past — not marked done yet</h3>` + overdue.map(appointmentRowHtml).join("");
+      }
+      list.innerHTML = html;
+      bindRowActions(list);
     }
-    list.innerHTML = html;
-    bindRowActions(list);
+    const doneList = $("appointmentCompletedList");
+    if (doneList) {
+      doneList.innerHTML = completed.length
+        ? completed.map(appointmentRowHtml).join("")
+        : `<p class="booking-empty">No completed appointments yet. Mark an appointment Done to move it here.</p>`;
+      bindRowActions(doneList);
+    }
   }
 
   function formatDateTime(dateStr, timeStr) {
@@ -507,7 +521,7 @@
     // (showing "Appointment updated" and making the original vanish), or the
     // old confirmation screen reappeared instead of an empty form.
     const form = $("appointmentForm");
-    if (panel === "view" && editingAppointmentId) resetSelection();
+    if (panel !== "create" && editingAppointmentId) resetSelection();
     if (panel === "create" && form && form.hidden) resetSelection();
     document.querySelectorAll(".appt-panel[data-appt-panel-section]").forEach((section) => {
       section.hidden = section.dataset.apptPanelSection !== panel;
@@ -526,7 +540,7 @@
     document.querySelectorAll(".appt-subnav-btn[data-appt-panel]").forEach((btn) => {
       btn.addEventListener("click", () => {
         setPanel(btn.dataset.apptPanel);
-        if (btn.dataset.apptPanel === "view") loadAppointments();
+        if (btn.dataset.apptPanel !== "create") loadAppointments();
       });
     });
 

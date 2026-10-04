@@ -3633,3 +3633,4 @@ video.media-viewer-media {
 @media (max-width: 640px) {
   .preorder-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+.preorder-load-error { margin: 0 0 12px; }

@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <!-- Bump ?v= on every asset below whenever one of them changes, otherwise
        returning browsers keep serving the previous copy from cache. -->
-  <link rel="stylesheet" href="assets/style.css?v=preorders-sync-1" />
+  <link rel="stylesheet" href="assets/style.css?v=completed-appts-1" />
 </head>
 <body>
   <svg class="icon-sprite" aria-hidden="true" focusable="false">
@@ -56,6 +56,7 @@
       <div class="appt-sidebar-subnav" role="group" aria-label="Appointment sections">
         <button type="button" class="appt-subnav-btn active" data-appt-panel="create" aria-selected="true">Create</button>
         <button type="button" class="appt-subnav-btn" data-appt-panel="view" aria-selected="false">View</button>
+        <button type="button" class="appt-subnav-btn" data-appt-panel="completed" aria-selected="false">Completed</button>
       </div>
       <button class="nav-btn" data-target="leads" role="tab" aria-selected="false"><svg class="icon"><use href="#i-user"></use></svg>Leads</button>
       <div class="appt-sidebar-subnav" role="group" aria-label="Lead sections">
@@ -84,6 +85,7 @@
     <div class="appt-subnav appt-content-subnav" role="tablist" aria-label="Appointments sections">
       <button type="button" class="appt-subnav-btn active" data-appt-panel="create" role="tab" aria-selected="true">Create an appointment</button>
       <button type="button" class="appt-subnav-btn" data-appt-panel="view" role="tab" aria-selected="false">View appointments</button>
+      <button type="button" class="appt-subnav-btn" data-appt-panel="completed" role="tab" aria-selected="false">Completed</button>
     </div>
 
     <section class="appt-panel" data-appt-panel-section="create">
@@ -166,6 +168,13 @@
       <section class="booking-list-card">
         <h2 class="booking-list-title">Upcoming appointments</h2>
         <div id="appointmentList" class="booking-list" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <section class="appt-panel" data-appt-panel-section="completed" hidden>
+      <section class="booking-list-card">
+        <h2 class="booking-list-title">Completed appointments</h2>
+        <div id="appointmentCompletedList" class="booking-list" aria-live="polite"></div>
       </section>
     </section>
   </main>
@@ -467,9 +476,9 @@
     <p>Hidden Jewels Co. · Internal team use</p>
   </footer>
 
-  <script src="assets/shell.js?v=preorders-sync-1"></script>
-  <script src="assets/appointments.js?v=preorders-sync-1"></script>
-  <script src="assets/leads.js?v=preorders-sync-1"></script>
-  <script src="assets/preorders.js?v=preorders-sync-1"></script>
+  <script src="assets/shell.js?v=completed-appts-1"></script>
+  <script src="assets/appointments.js?v=completed-appts-1"></script>
+  <script src="assets/leads.js?v=completed-appts-1"></script>
+  <script src="assets/preorders.js?v=completed-appts-1"></script>
 </body>
 </html>

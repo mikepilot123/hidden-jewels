@@ -14,14 +14,31 @@
   const LS_PIN = "rpc_hj_pin";
   const STATUSES = ["To order", "Ordered", "Arrived", "Collected", "Cancelled"];
   const AUTO_REFRESH_MS = 60000;
+  // Last list the server returned, so a failed refresh (or a slow network)
+  // never makes saved preorders look like they've vanished.
+  const CACHE_KEY = "rpc_hj_preorders_cache";
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  let preorders = [];
+  let preorders = readCache();
   let bound = false;
   let loadedOnce = false;
   let lastSyncedAt = 0;
+  let loadError = "";
+  // Bumped on every save/delete. A list request that started before a write
+  // finished can come back without it — its result is discarded rather than
+  // overwriting the preorder that was just saved.
+  let writeSeq = 0;
+  let loadInFlight = null;
+
+  function readCache() {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "[]") || []; }
+    catch (_) { return []; }
+  }
+  function saveCache() {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(preorders)); } catch (_) { /* storage unavailable */ }
+  }
 
   function getPin() {
     try { return localStorage.getItem(LS_PIN) || ""; }
@@ -55,7 +72,12 @@
 
   function money(value) {
     const n = Number(value || 0);
-    return new Intl.NumberFormat(undefined, { style: "currency", currency: "TTD", currencyDisplay: "narrowSymbol" }).format(n);
+    try {
+      return new Intl.NumberFormat(undefined, { style: "currency", currency: "TTD", currencyDisplay: "narrowSymbol" }).format(n);
+    } catch (_) {
+      // Older Safari doesn't support narrowSymbol.
+      return "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
   }
 
   function num(value) {
@@ -189,6 +211,7 @@
     $("preorderGoToView")?.addEventListener("click", () => {
       resetForm();
       setPanel("view");
+      loadPreorders({ force: true, quiet: true });
     });
     $("preorderTotal")?.addEventListener("input", updateBalancePreview);
     $("preorderPaid")?.addEventListener("input", updateBalancePreview);
@@ -225,8 +248,8 @@
       setFormVisible(true);
     }
     if (!getPin()) {
-      preorders = [];
-      setStatus("stale", "Save the team PIN in Settings before loading preorders.");
+      loadError = "Save the team PIN in Settings before loading preorders.";
+      setStatus("stale", loadError);
       render();
       return;
     }
@@ -234,18 +257,28 @@
       render();
       return;
     }
+    if (loadInFlight) return loadInFlight;
     if (!quiet || !loadedOnce) setStatus("stale", "Loading preorders…");
-    try {
-      const data = await api({ action: "listPreorders" });
-      preorders = Array.isArray(data.preorders) ? data.preorders : [];
-      loadedOnce = true;
-      lastSyncedAt = Date.now();
-      setStatus("live", syncedLabel());
-      render();
-    } catch (err) {
-      setStatus("error", "Couldn't load preorders: " + err.message);
-      render();
-    }
+    loadInFlight = (async () => {
+      const seqAtStart = writeSeq;
+      try {
+        const data = await api({ action: "listPreorders" });
+        if (seqAtStart !== writeSeq) return; // a save landed meanwhile — next refresh will include it
+        preorders = Array.isArray(data.preorders) ? data.preorders : [];
+        saveCache();
+        loadedOnce = true;
+        loadError = "";
+        lastSyncedAt = Date.now();
+        setStatus("live", syncedLabel());
+      } catch (err) {
+        loadError = "Couldn't load preorders from the server: " + err.message;
+        setStatus("error", loadError);
+      } finally {
+        loadInFlight = null;
+        render();
+      }
+    })();
+    return loadInFlight;
   }
 
   function formPayload() {
@@ -278,8 +311,11 @@
     if (msg) msg.hidden = true;
     const isNew = !payload.id;
     try {
+      writeSeq++;
       const data = await api(Object.assign({ action: isNew ? "addPreorder" : "updatePreorder" }, payload));
+      writeSeq++;
       merge(data.preorder);
+      revealInList(data.preorder);
       setStatus("live", syncedLabel());
       render();
       const p = data.preorder || {};
@@ -304,6 +340,21 @@
     const index = preorders.findIndex((item) => item.id === p.id);
     if (index === -1) preorders.unshift(p);
     else preorders[index] = p;
+    saveCache();
+  }
+
+  // After a save, make sure the list isn't filtered so the new/edited
+  // preorder is hidden (a leftover search, or a status filter it doesn't
+  // match).
+  function revealInList(p) {
+    const search = $("preorderSearch");
+    if (search && search.value) {
+      search.value = "";
+      if ($("clearPreorderSearch")) $("clearPreorderSearch").hidden = true;
+    }
+    const filter = $("preorderStatusFilter");
+    if (filter && p && filter.value !== "all" && filter.value !== "open" && filter.value !== p.status) filter.value = "all";
+    if (filter && p && filter.value === "open" && ["Collected", "Cancelled"].includes(p.status)) filter.value = "all";
   }
 
   function filtered() {
@@ -343,9 +394,13 @@
       const total = preorders.length;
       count.textContent = total ? `${visible.length} of ${total} preorder${total === 1 ? "" : "s"}` : "No preorders yet";
     }
-    list.innerHTML = visible.length
+    let html = loadError ? `<p class="field-error preorder-load-error">${esc(loadError)}${preorders.length ? " Showing this device's last saved copy." : ""}</p>` : "";
+    html += visible.length
       ? visible.map(cardHtml).join("")
-      : `<p class="ops-empty">No preorders match the current filters.</p>`;
+      : preorders.length
+        ? `<p class="ops-empty">No preorders match the current filters.</p>`
+        : loadError ? "" : `<p class="ops-empty">No preorders yet.</p>`;
+    list.innerHTML = html;
   }
 
   function cardHtml(p) {
@@ -401,6 +456,7 @@
       if (!(amount > 0)) { window.alert("Enter a payment amount greater than zero."); return; }
       if (balance != null && amount > balance + 0.005) { window.alert(`That's more than the ${money(balance)} balance.`); return; }
       try {
+        writeSeq++;
         const data = await api({ action: "updatePreorder", id: p.id, amountPaid: (num(p.amountPaid) + amount).toFixed(2) });
         merge(data.preorder);
         render();
@@ -415,8 +471,10 @@
     const p = preorders.find((item) => item.id === id);
     if (!p || !window.confirm(`Delete ${p.customerName}'s preorder for ${p.ring}?`)) return;
     try {
+      writeSeq++;
       await api({ action: "deletePreorder", id });
       preorders = preorders.filter((item) => item.id !== id);
+      saveCache();
       render();
       setStatus("live", syncedLabel());
     } catch (err) {
@@ -428,6 +486,7 @@
     const select = event.target.closest("[data-preorder-status]");
     if (!select) return;
     try {
+      writeSeq++;
       const data = await api({ action: "updatePreorder", id: select.dataset.preorderStatus, status: select.value });
       merge(data.preorder);
       render();
