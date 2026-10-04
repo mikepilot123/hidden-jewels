@@ -3522,6 +3522,7 @@ video.media-viewer-media {
 @media (min-width: 900px) {
   .nav-btn[data-target="appointments"]:not(.active) + .appt-sidebar-subnav,
   .nav-btn[data-target="leads"]:not(.active) + .appt-sidebar-subnav,
+  .nav-btn[data-target="preorders"]:not(.active) + .appt-sidebar-subnav,
   .nav-btn[data-target="targets"]:not(.active) + .appt-sidebar-subnav {
     display: none;
   }
@@ -3575,4 +3576,60 @@ video.media-viewer-media {
   #view-appointments .booking-card {
     grid-template-columns: minmax(360px, 1.75fr) minmax(190px, 0.8fr);
   }
+}
+
+/* ---- Appointments sync + edit state ---------------------------------- */
+.status-line .status-refresh { margin-left: auto; width: 32px; height: 32px; padding: 0; }
+.appt-edit-banner {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.88rem;
+}
+.booking-row.is-editing { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.booking-list-subtitle { margin: 20px 0 10px; font-size: 0.92rem; color: var(--text-dim); font-weight: 600; }
+
+/* ---- Preorders -------------------------------------------------------- */
+.preorder-status-to-order { --lead-tone: var(--danger); }
+.preorder-status-ordered { --lead-tone: #416aa3; }
+.preorder-status-arrived { --lead-tone: var(--warn); }
+.preorder-status-collected { --lead-tone: var(--price); }
+.preorder-status-cancelled { --lead-tone: var(--text-dim); }
+.preorder-status-to-order .lead-status-pill { background: #fff5f5; color: var(--danger); }
+.preorder-status-ordered .lead-status-pill { background: #e8eef8; color: #416aa3; }
+.preorder-status-arrived .lead-status-pill { background: #fffbeb; color: var(--warn); }
+.preorder-status-collected .lead-status-pill { background: #dff5ec; color: var(--price); }
+.preorder-status-cancelled { opacity: 0.65; }
+.preorder-balance {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.preorder-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.preorder-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.preorder-stat span { font-size: 0.76rem; color: var(--text-dim); }
+.preorder-stat strong { font-size: 1.1rem; }
+.preorder-stat.is-alert { border-color: var(--danger); }
+.preorder-stat.is-alert strong { color: var(--danger); }
+@media (max-width: 640px) {
+  .preorder-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

@@ -8,6 +8,7 @@
   const LEADS_URL = "https://hidden-jewels.vercel.app/api/leads";
   const LS_PIN = "rpc_hj_pin";
   const STATUSES = ["New", "Contacted", "Quoted", "Follow-up", "Won", "Lost"];
+  const AUTO_REFRESH_MS = 60000;
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -15,6 +16,7 @@
   let leads = [];
   let bound = false;
   let loadedOnce = false;
+  let lastSyncedAt = 0;
 
   function getPin() {
     try { return localStorage.getItem(LS_PIN) || ""; }
@@ -187,7 +189,7 @@
     if (filter && !filter.innerHTML) filter.innerHTML = statusOptions("", true);
   }
 
-  async function loadLeads({ force = false } = {}) {
+  async function loadLeads({ force = false, quiet = false } = {}) {
     const firstRun = !bound;
     bindOnce();
     populateControls();
@@ -202,11 +204,12 @@
       render();
       return;
     }
-    setStatus("stale", "Loading leads…");
+    if (!quiet || !loadedOnce) setStatus("stale", "Loading leads…");
     try {
       const data = await api({ action: "list" });
       leads = Array.isArray(data.leads) ? data.leads : [];
       loadedOnce = true;
+      lastSyncedAt = Date.now();
       setStatus("live", `Leads synced ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`);
       render();
     } catch (err) {
@@ -379,5 +382,15 @@
     }
   }
 
-  window.addEventListener("rpc-enter-leads", () => loadLeads());
+  // Always pull the latest list when the Leads tab is opened, then keep it
+  // fresh every minute while visible and whenever the app comes back to the
+  // foreground, so a lead added on one device shows up on the others.
+  window.addEventListener("rpc-enter-leads", () => loadLeads({ force: true, quiet: true }));
+  const leadsVisible = () => !document.hidden && !$("view-leads")?.hidden && !!getPin();
+  setInterval(() => {
+    if (leadsVisible()) loadLeads({ force: true, quiet: true });
+  }, AUTO_REFRESH_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (leadsVisible() && Date.now() - lastSyncedAt > 15000) loadLeads({ force: true, quiet: true });
+  });
 })();

@@ -3,13 +3,22 @@
    a month calendar, pick a staff member (Fresha-style chip picker,
    shared staff list), then add the client's details — all visible
    at once, no step navigation.
-   Stored locally (no backend for the booking itself); booked slots
-   are excluded from the picker so two clients can't be double-
-   booked into the same time.
+   Bookings sync through the shared Vercel/Postgres API (same team PIN
+   as Leads) so every device sees the same schedule, refreshing every
+   minute and whenever the app comes back to the foreground. A
+   localStorage copy of the last server list keeps the page usable
+   offline, and bookings made before syncing existed are uploaded once.
+   Booked slots are excluded from the picker, and the server rejects a
+   slot another device took in the meantime.
    ============================================================ */
 
 (function () {
-  const APPOINTMENTS_KEY = "rpc_hj_appointments";
+  // Pre-sync store (appointments used to live only on this device) — read
+  // once for migration, then kept as a _backup key, never written again.
+  const LEGACY_APPOINTMENTS_KEY = "rpc_hj_appointments";
+  // Offline fallback: the last list the server returned.
+  const CACHE_KEY = "rpc_hj_appointments_cache";
+  const AUTO_REFRESH_MS = 60000;
   const OPEN_HOUR = 9; // 9:00 AM
   const CLOSE_HOUR = 17; // 5:00 PM
   const SLOT_MINUTES = 30;
@@ -21,7 +30,6 @@
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
   let viewMonth = startOfMonth(new Date());
   let selectedDate = null; // "YYYY-MM-DD"
@@ -30,6 +38,9 @@
   let technicians = [];
   let bound = false;
   let editingAppointmentId = null; // set while editing an existing appointment
+  let editingOriginal = null; // { date, time } the edited appointment started at
+  let saving = false;
+  let lastSyncedAt = 0;
 
   function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
   function todayISO() { return toISODate(new Date()); }
@@ -46,12 +57,107 @@
   }
   function minutesToValue(mins) { return `${pad2(Math.floor(mins / 60))}:${pad2(mins % 60)}`; }
 
+  // In-memory list, refreshed from the server. Kept synchronous for the
+  // many read call sites (slots, day lists, renders).
+  let APPOINTMENTS = readCache();
+
   function readAppointments() {
-    try { return JSON.parse(localStorage.getItem(APPOINTMENTS_KEY) || "[]"); }
+    return APPOINTMENTS.slice();
+  }
+  function setAppointments(list) {
+    APPOINTMENTS = Array.isArray(list) ? list : [];
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(APPOINTMENTS)); } catch (_) { /* storage unavailable */ }
+  }
+  function mergeAppointment(appointment) {
+    if (!appointment || !appointment.id) return;
+    const rest = APPOINTMENTS.filter((a) => a.id !== appointment.id);
+    setAppointments(rest.concat(appointment));
+  }
+  function readCache() {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "[]"); }
     catch (_) { return []; }
   }
-  function writeAppointments(list) {
-    try { localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(list)); } catch (_) { /* storage unavailable */ }
+
+  function getPin() {
+    try { return localStorage.getItem(LS_PIN) || ""; }
+    catch (_) { return ""; }
+  }
+
+  async function api(payload) {
+    // text/plain avoids a CORS preflight, matching the rest of the app.
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ pin: getPin() }, payload)),
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Rejected");
+    return data;
+  }
+
+  function setSyncStatus(state, text) {
+    const dot = $("apptStatusDot");
+    const label = $("apptUpdated");
+    if (dot) {
+      dot.classList.remove("live", "stale", "error");
+      dot.classList.add(state);
+    }
+    if (label) label.textContent = text;
+  }
+  function syncedLabel() {
+    return `Appointments synced ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  }
+
+  let loadInFlight = null;
+  function loadAppointments() {
+    if (!getPin()) {
+      setSyncStatus("stale", "Save the team PIN in Settings to sync appointments across devices.");
+      return Promise.resolve();
+    }
+    if (loadInFlight) return loadInFlight;
+    loadInFlight = (async () => {
+      try {
+        const data = await api({ action: "listAppointments" });
+        setAppointments(data.appointments || []);
+        await migrateLegacyAppointments();
+        lastSyncedAt = Date.now();
+        setSyncStatus("live", syncedLabel());
+        renderList();
+        renderSlots();
+      } catch (err) {
+        setSyncStatus("error", "Couldn't sync appointments (" + err.message + ") — showing this device's last saved copy.");
+      } finally {
+        loadInFlight = null;
+      }
+    })();
+    return loadInFlight;
+  }
+
+  // One-time upload of bookings made before appointments synced through the
+  // server. The original ids are kept (the server ignores ids it already
+  // has), so re-running after a partial failure can't duplicate.
+  async function migrateLegacyAppointments() {
+    let raw = "";
+    try { raw = localStorage.getItem(LEGACY_APPOINTMENTS_KEY) || ""; } catch (_) { return; }
+    if (!raw) return;
+    let legacy = [];
+    try { legacy = JSON.parse(raw) || []; } catch (_) { legacy = []; }
+    const known = new Set(APPOINTMENTS.map((a) => a.id));
+    let uploaded = 0;
+    for (const item of legacy) {
+      if (!item || !item.id || known.has(item.id) || !item.date || !item.time || !item.client) continue;
+      await api(Object.assign({ action: "addAppointment", legacy: true }, item));
+      uploaded++;
+    }
+    if (uploaded) {
+      const data = await api({ action: "listAppointments" });
+      setAppointments(data.appointments || []);
+    }
+    try {
+      localStorage.setItem(LEGACY_APPOINTMENTS_KEY + "_backup", raw);
+      localStorage.removeItem(LEGACY_APPOINTMENTS_KEY);
+    } catch (_) { /* storage unavailable */ }
   }
 
   function isClosedDay(date) { return date.getDay() === 0; } // Sunday
@@ -70,6 +176,16 @@
   }
 
   function slotsFor(dateStr) {
+    // While editing, the appointment's current time always stays pickable —
+    // even if it's already passed — so notes or staff can be changed
+    // without being forced to reschedule.
+    const keep = editingOriginal && editingOriginal.date === dateStr ? editingOriginal.time : null;
+    const slots = openSlotsFor(dateStr);
+    if (keep && !slots.includes(keep)) slots.push(keep);
+    return slots.sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
+  }
+
+  function openSlotsFor(dateStr) {
     const [y, m, d] = dateStr.split("-").map(Number);
     const date = new Date(y, m - 1, d);
     if (isClosedDay(date) || isPastDay(date)) return [];
@@ -162,6 +278,9 @@
       : "";
 
     const slots = slotsFor(selectedDate);
+    // A background sync can reveal that another device took the time picked
+    // here — drop it rather than letting the booking fail on submit.
+    if (selectedTime && !slots.includes(selectedTime)) selectedTime = null;
     html += slots.length
       ? slots.map((value) => `<button type="button" class="booking-slot-btn ${value === selectedTime ? "is-selected" : ""}" data-time="${value}">${minutesToLabel(timeToMinutes(value))}</button>`).join("")
       : `<p class="booking-slots-empty">No open times this day.</p>`;
@@ -197,7 +316,16 @@
     const goToViewBtn = $("apptGoToView");
     if (confirmBtn) {
       confirmBtn.hidden = !showForm;
-      confirmBtn.textContent = editingAppointmentId ? "Save changes" : "Book appointment";
+      confirmBtn.disabled = saving;
+      confirmBtn.textContent = saving ? "Saving…" : editingAppointmentId ? "Save changes" : "Book appointment";
+    }
+    const cancelEditBtn = $("apptCancelEdit");
+    if (cancelEditBtn) cancelEditBtn.hidden = !showForm || !editingAppointmentId;
+    const editBanner = $("apptEditBanner");
+    if (editBanner) {
+      const editing = editingAppointmentId && APPOINTMENTS.find((a) => a.id === editingAppointmentId);
+      editBanner.hidden = !showForm || !editing;
+      if (editing) editBanner.textContent = `Editing ${editing.client}'s appointment (${formatDateTime(editing.date, editing.time)}). Save changes to update it, or cancel to book a new one instead.`;
     }
     if (createAnotherBtn) createAnotherBtn.hidden = showForm;
     if (goToViewBtn) goToViewBtn.hidden = showForm;
@@ -208,8 +336,11 @@
     selectedTime = null;
     selectedTechnician = "";
     editingAppointmentId = null;
+    editingOriginal = null;
     const form = $("appointmentForm");
     if (form) form.reset();
+    const msg = $("appointmentMessage");
+    if (msg) msg.hidden = true;
     renderTechnicianPicker();
     renderCalendar();
     renderSlots();
@@ -220,15 +351,7 @@
 
   async function fetchTechnicians() {
     try {
-      const pin = localStorage.getItem(LS_PIN) || "";
-      const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "listTechnicians", pin }),
-      });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || "Rejected");
+      const data = await api({ action: "listTechnicians" });
       const names = (data.technicians || []).map((t) => (typeof t === "string" ? t : t.name)).filter(Boolean);
       technicians = names.length ? names : DEFAULT_TECHNICIANS.slice();
     } catch (_) {
@@ -266,7 +389,7 @@
 
   function appointmentRowHtml(item) {
     return `
-      <article class="booking-row ${item.status === "completed" ? "is-completed" : ""}">
+      <article class="booking-row ${item.status === "completed" ? "is-completed" : ""} ${item.id === editingAppointmentId ? "is-editing" : ""}">
         <div class="booking-row-main">
           <strong>${esc(item.client)}</strong>
           <p>${item.technician ? "Assigned to " + esc(item.technician) : "Any staff"}</p>
@@ -289,18 +412,34 @@
       });
     });
     list.querySelectorAll("[data-complete]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        writeAppointments(readAppointments().map((item) =>
-          item.id === btn.dataset.complete
-            ? Object.assign({}, item, { status: item.status === "completed" ? "scheduled" : "completed" })
-            : item
-        ));
+      btn.addEventListener("click", async () => {
+        const item = APPOINTMENTS.find((a) => a.id === btn.dataset.complete);
+        if (!item) return;
+        btn.disabled = true;
+        try {
+          const data = await api({ action: "updateAppointment", id: item.id, status: item.status === "completed" ? "scheduled" : "completed" });
+          mergeAppointment(data.appointment);
+          setSyncStatus("live", syncedLabel());
+        } catch (err) {
+          setSyncStatus("error", "Couldn't update appointment: " + err.message);
+        }
         renderList();
+        renderSlots();
       });
     });
     list.querySelectorAll("[data-delete]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        writeAppointments(readAppointments().filter((item) => item.id !== btn.dataset.delete));
+      btn.addEventListener("click", async () => {
+        const item = APPOINTMENTS.find((a) => a.id === btn.dataset.delete);
+        if (!item || !window.confirm(`Delete ${item.client}'s appointment on ${formatDateTime(item.date, item.time)}?`)) return;
+        btn.disabled = true;
+        try {
+          await api({ action: "deleteAppointment", id: item.id });
+          setAppointments(APPOINTMENTS.filter((a) => a.id !== item.id));
+          if (editingAppointmentId === item.id) resetSelection();
+          setSyncStatus("live", syncedLabel());
+        } catch (err) {
+          setSyncStatus("error", "Couldn't delete appointment: " + err.message);
+        }
         renderList();
         renderSlots();
       });
@@ -313,8 +452,11 @@
   // so this just fills in the fields in place.
   function editAppointment(appointment) {
     editingAppointmentId = appointment.id;
-    setPanel("create");
+    editingOriginal = { date: appointment.date, time: appointment.time };
+    // Form first: setPanel("create") resets a hidden (post-booking) form,
+    // which would otherwise wipe the edit that's just been started.
     setFormVisible(true);
+    setPanel("create");
     const [y, m, d] = appointment.date.split("-").map(Number);
     viewMonth = startOfMonth(new Date(y, m - 1, d));
     selectedDate = appointment.date;
@@ -337,10 +479,18 @@
   function renderList() {
     const list = $("appointmentList");
     if (!list) return;
-    const appointments = readAppointments().sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
-    list.innerHTML = appointments.length
-      ? appointments.map(appointmentRowHtml).join("")
-      : `<p class="booking-empty">No appointments scheduled yet.</p>`;
+    const today = todayISO();
+    const byTime = (a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`);
+    const all = readAppointments().filter((a) => a.status !== "cancelled");
+    const upcoming = all.filter((a) => a.date >= today && a.status !== "completed").sort(byTime);
+    const past = all.filter((a) => a.date < today || a.status === "completed").sort((a, b) => byTime(b, a));
+    let html = upcoming.length
+      ? upcoming.map(appointmentRowHtml).join("")
+      : `<p class="booking-empty">No upcoming appointments.</p>`;
+    if (past.length) {
+      html += `<h3 class="booking-list-subtitle">Past &amp; completed</h3>` + past.map(appointmentRowHtml).join("");
+    }
+    list.innerHTML = html;
     bindRowActions(list);
   }
 
@@ -351,6 +501,14 @@
   }
 
   function setPanel(panel) {
+    // Leaving the form mid-edit abandons the edit, and coming back to Create
+    // after a booking starts a fresh form. Otherwise the next "new" booking
+    // silently overwrote the appointment that had been opened for editing
+    // (showing "Appointment updated" and making the original vanish), or the
+    // old confirmation screen reappeared instead of an empty form.
+    const form = $("appointmentForm");
+    if (panel === "view" && editingAppointmentId) resetSelection();
+    if (panel === "create" && form && form.hidden) resetSelection();
     document.querySelectorAll(".appt-panel[data-appt-panel-section]").forEach((section) => {
       section.hidden = section.dataset.apptPanelSection !== panel;
     });
@@ -366,7 +524,10 @@
     bound = true;
 
     document.querySelectorAll(".appt-subnav-btn[data-appt-panel]").forEach((btn) => {
-      btn.addEventListener("click", () => setPanel(btn.dataset.apptPanel));
+      btn.addEventListener("click", () => {
+        setPanel(btn.dataset.apptPanel);
+        if (btn.dataset.apptPanel === "view") loadAppointments();
+      });
     });
 
     $("bookingPrevMonth")?.addEventListener("click", () => {
@@ -382,38 +543,56 @@
     });
     const form = $("appointmentForm");
     if (form) {
-      form.addEventListener("submit", (event) => {
+      form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (saving) return;
         const msg = $("appointmentMessage");
+        const showMsg = (text) => { if (msg) { msg.textContent = text; msg.hidden = false; } };
         const client = ($("appointmentClient")?.value || "").trim();
         if (!selectedDate || !selectedTime) {
-          if (msg) { msg.textContent = "Pick a day and time."; msg.hidden = false; }
+          showMsg("Pick a day and time.");
           return;
         }
         if (!client) {
-          if (msg) { msg.textContent = "Add the client's name."; msg.hidden = false; }
+          showMsg("Add the client's name.");
+          return;
+        }
+        if (!getPin()) {
+          showMsg("Save the team PIN in Settings before booking — appointments are shared with every device.");
           return;
         }
         const isEdit = !!editingAppointmentId;
-        const existing = isEdit ? readAppointments().find((a) => a.id === editingAppointmentId) : null;
-        const appointment = {
-          id: isEdit ? editingAppointmentId : uid(),
+        const payload = {
+          action: isEdit ? "updateAppointment" : "addAppointment",
           client,
           phone: ($("appointmentPhone")?.value || "").trim(),
           technician: selectedTechnician || "",
           date: selectedDate,
           time: selectedTime,
           notes: ($("appointmentNotes")?.value || "").trim(),
-          status: existing?.status || "scheduled",
-          created: existing?.created || new Date().toISOString(),
         };
-        writeAppointments(
-          isEdit
-            ? readAppointments().map((a) => (a.id === editingAppointmentId ? appointment : a))
-            : [appointment].concat(readAppointments())
-        );
-        editingAppointmentId = null;
+        if (isEdit) payload.id = editingAppointmentId;
         if (msg) msg.hidden = true;
+        saving = true;
+        setFormVisible(true);
+        let appointment;
+        try {
+          const data = await api(payload);
+          appointment = data.appointment;
+          mergeAppointment(appointment);
+          setSyncStatus("live", syncedLabel());
+        } catch (err) {
+          showMsg(`Couldn't ${isEdit ? "save changes" : "book the appointment"}: ${err.message}`);
+          // A slot clash means our copy is stale — refresh so the picker
+          // shows what's actually free.
+          loadAppointments();
+          return;
+        } finally {
+          saving = false;
+          setFormVisible(true);
+        }
+        editingAppointmentId = null;
+        editingOriginal = null;
         renderList();
         const [y, m, d] = appointment.date.split("-").map(Number);
         const dateLabel = new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
@@ -428,6 +607,7 @@
             : `${client}'s appointment is booked for ${dateLabel} at ${minutesToLabel(timeToMinutes(appointment.time))}.`;
         }
         setFormVisible(false);
+        $("view-appointments")?.scrollIntoView({ block: "start" });
       });
     }
 
@@ -435,6 +615,21 @@
     $("apptGoToView")?.addEventListener("click", () => {
       resetSelection();
       setPanel("view");
+    });
+    $("apptCancelEdit")?.addEventListener("click", () => resetSelection());
+    $("apptRefresh")?.addEventListener("click", () => loadAppointments());
+
+    // Keep every device in step: refresh once a minute while the app is
+    // open and visible, and straight away when it comes back to the
+    // foreground (e.g. a phone unlocked after someone booked on the iPad).
+    setInterval(() => {
+      if (!document.hidden) loadAppointments();
+    }, AUTO_REFRESH_MS);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && Date.now() - lastSyncedAt > 15000) loadAppointments();
+    });
+    window.addEventListener("focus", () => {
+      if (Date.now() - lastSyncedAt > 15000) loadAppointments();
     });
   }
 
@@ -450,6 +645,11 @@
     // in-progress edit left behind by navigating away is abandoned, not
     // silently resumed against whatever gets picked next.
     editingAppointmentId = null;
+    editingOriginal = null;
+    const form = $("appointmentForm");
+    if (form) form.reset();
+    const msg = $("appointmentMessage");
+    if (msg) msg.hidden = true;
     renderCalendar();
     renderSlots();
     renderList();
@@ -457,6 +657,7 @@
     fetchTechnicians();
     setFormVisible(true);
     setPanel("create");
+    loadAppointments();
   }
 
   window.addEventListener("rpc-enter-appointments", init);

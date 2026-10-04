@@ -1,5 +1,6 @@
 /* App shell: nav switching, mobile drawer, and the Settings screen (team PIN
-   + staff roster). assets/appointments.js and assets/leads.js are separate
+   + staff roster). assets/appointments.js, assets/leads.js and
+   assets/preorders.js are separate
    self-contained modules that each read the PIN from localStorage — this
    file owns the "connect" flow they depend on but never imports them. */
 (function () {
@@ -16,6 +17,7 @@
   const views = {
     appointments: $("view-appointments"),
     leads: $("view-leads"),
+    preorders: $("view-preorders"),
     settings: $("view-settings"),
   };
   function setActiveNav(target) {
@@ -34,6 +36,7 @@
     showView(target);
     if (target === "leads") window.dispatchEvent(new Event("rpc-enter-leads"));
     if (target === "appointments") window.dispatchEvent(new Event("rpc-enter-appointments"));
+    if (target === "preorders") window.dispatchEvent(new Event("rpc-enter-preorders"));
     if (target === "settings") enterSettings();
   }
   window.RPC_SHOW_VIEW = navigateTo;
@@ -129,6 +132,7 @@
       showMain();
       window.dispatchEvent(new Event("rpc-enter-leads"));
       window.dispatchEvent(new Event("rpc-enter-appointments"));
+      window.dispatchEvent(new Event("rpc-enter-preorders"));
     } catch (e) {
       err.textContent = "Couldn't connect: " + e.message + ". Check the PIN.";
       err.hidden = false;
