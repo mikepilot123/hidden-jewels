@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <!-- Bump ?v= on every asset below whenever one of them changes, otherwise
        returning browsers keep serving the previous copy from cache. -->
-  <link rel="stylesheet" href="assets/style.css?v=appt-cards-1" />
+  <link rel="stylesheet" href="assets/style.css?v=appointment-status-1" />
 </head>
 <body>
   <svg class="icon-sprite" aria-hidden="true" focusable="false">
@@ -56,7 +56,7 @@
       <div class="appt-sidebar-subnav" role="group" aria-label="Appointment sections">
         <button type="button" class="appt-subnav-btn active" data-appt-panel="create" aria-selected="true">Create</button>
         <button type="button" class="appt-subnav-btn" data-appt-panel="view" aria-selected="false">View</button>
-        <button type="button" class="appt-subnav-btn" data-appt-panel="completed" aria-selected="false">Completed</button>
+        <button type="button" class="appt-subnav-btn" data-appt-panel="completed" aria-selected="false">Closed</button>
       </div>
       <button class="nav-btn" data-target="leads" role="tab" aria-selected="false"><svg class="icon"><use href="#i-user"></use></svg>Leads</button>
       <div class="appt-sidebar-subnav" role="group" aria-label="Lead sections">
@@ -85,7 +85,7 @@
     <div class="appt-subnav appt-content-subnav" role="tablist" aria-label="Appointments sections">
       <button type="button" class="appt-subnav-btn active" data-appt-panel="create" role="tab" aria-selected="true">Create an appointment</button>
       <button type="button" class="appt-subnav-btn" data-appt-panel="view" role="tab" aria-selected="false">View appointments</button>
-      <button type="button" class="appt-subnav-btn" data-appt-panel="completed" role="tab" aria-selected="false">Completed</button>
+      <button type="button" class="appt-subnav-btn" data-appt-panel="completed" role="tab" aria-selected="false">Closed</button>
     </div>
 
     <section class="appt-panel" data-appt-panel-section="create">
@@ -166,14 +166,26 @@
 
     <section class="appt-panel" data-appt-panel-section="view" hidden>
       <section class="booking-list-card">
-        <h2 class="booking-list-title">Upcoming appointments</h2>
+        <div class="appt-list-heading">
+          <div>
+            <p class="section-kicker">Client appointments</p>
+            <h2 class="booking-list-title">Active appointments</h2>
+          </div>
+          <p>Change a status directly on a card to keep the team in sync.</p>
+        </div>
         <div id="appointmentList" class="ops-list leads-list appt-list" aria-live="polite"></div>
       </section>
     </section>
 
     <section class="appt-panel" data-appt-panel-section="completed" hidden>
       <section class="booking-list-card">
-        <h2 class="booking-list-title">Completed appointments</h2>
+        <div class="appt-list-heading">
+          <div>
+            <p class="section-kicker">Appointment history</p>
+            <h2 class="booking-list-title">Closed appointments</h2>
+          </div>
+          <p>Bought, completed and cancelled appointments stay here for reference.</p>
+        </div>
         <div id="appointmentCompletedList" class="ops-list leads-list appt-list" aria-live="polite"></div>
       </section>
     </section>
@@ -482,9 +494,9 @@
     <p>Hidden Jewels Co. · Internal team use</p>
   </footer>
 
-  <script src="assets/shell.js?v=appt-cards-1"></script>
-  <script src="assets/appointments.js?v=appt-cards-1"></script>
-  <script src="assets/leads.js?v=appt-cards-1"></script>
-  <script src="assets/preorders.js?v=appt-cards-1"></script>
+  <script src="assets/shell.js?v=appointment-status-1"></script>
+  <script src="assets/appointments.js?v=appointment-status-1"></script>
+  <script src="assets/leads.js?v=appointment-status-1"></script>
+  <script src="assets/preorders.js?v=appointment-status-1"></script>
 </body>
 </html>

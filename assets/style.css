@@ -3707,32 +3707,311 @@ video.media-viewer-media {
   .ring-clear { width: 100%; }
 }
 
-/* ---- Appointment cards (same layout as lead cards) -------------------- */
-.appt-state-scheduled { --lead-tone: #416aa3; }
-.appt-state-today { --lead-tone: var(--accent); }
-.appt-state-overdue { --lead-tone: var(--danger); }
-.appt-state-completed { --lead-tone: var(--price); }
-.appt-state-overdue .lead-status-pill { background: #fff5f5; color: var(--danger); }
-.appt-state-completed .lead-status-pill { background: #dff5ec; color: var(--price); }
-.appt-avatar { font-weight: 700; font-size: 1rem; letter-spacing: 0.02em; }
-.appt-card.is-editing { box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow); border-color: var(--accent); }
-.appt-done-btn {
+/* ---- Appointment status board ----------------------------------------- */
+.appt-list-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+.appt-list-heading .section-kicker {
+  margin: 0 0 4px;
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.appt-list-heading .booking-list-title { margin: 0; }
+.appt-list-heading > p {
+  max-width: 420px;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.84rem;
+  text-align: right;
+}
+.appt-list {
+  display: grid;
+  gap: 22px;
+}
+.appt-status-group {
+  --appt-tone: #416aa3;
+  --appt-tone-soft: #f2f6fb;
+  display: grid;
+  gap: 10px;
+}
+.appt-group-still_deciding { --appt-tone: #a16207; --appt-tone-soft: #fffbeb; }
+.appt-group-scheduled { --appt-tone: #2563b9; --appt-tone-soft: #f0f6ff; }
+.appt-group-rescheduled { --appt-tone: #7c3aed; --appt-tone-soft: #f6f2ff; }
+.appt-group-bought { --appt-tone: #047857; --appt-tone-soft: #ecfdf5; }
+.appt-group-completed { --appt-tone: #0f766e; --appt-tone-soft: #f0fdfa; }
+.appt-group-cancelled { --appt-tone: #64748b; --appt-tone-soft: #f8fafc; }
+.appt-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--appt-tone) 25%, var(--border));
+  border-left: 4px solid var(--appt-tone);
+  border-radius: var(--radius-md);
+  background: var(--appt-tone-soft);
+}
+.appt-group-header > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.appt-group-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--appt-tone);
+}
+.appt-group-header h3 {
+  margin: 0;
+  color: var(--appt-tone);
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+.appt-group-description {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+.appt-group-count {
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--appt-tone) 10%, #fff);
+  color: var(--appt-tone);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.appt-group-cards {
+  display: grid;
+  gap: 12px;
+}
+.appt-record {
+  --appt-tone: #2563b9;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--appt-tone);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.appt-status-still_deciding { --appt-tone: #a16207; }
+.appt-status-scheduled { --appt-tone: #2563b9; }
+.appt-status-rescheduled { --appt-tone: #7c3aed; }
+.appt-status-bought { --appt-tone: #047857; }
+.appt-status-completed { --appt-tone: #0f766e; }
+.appt-status-cancelled { --appt-tone: #64748b; }
+.appt-record.is-editing {
+  border-color: var(--appt-tone);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--appt-tone) 14%, transparent), var(--shadow);
+}
+.appt-record-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 82px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.appt-client-block { min-width: 0; }
+.appt-client-name {
+  color: var(--text);
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.appt-phone {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 7px;
-  width: 100%;
-  min-height: 42px;
-  padding: 8px 10px;
-  border: 1px solid var(--price);
+  min-height: 34px;
+  margin-top: 8px;
+  padding: 5px 10px;
   border-radius: var(--radius-sm);
-  background: #ecfdf5;
-  color: var(--price);
-  font: 600 0.86rem var(--font-display);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.appt-phone .icon { width: 16px; height: 16px; }
+.appt-phone.is-empty { background: var(--bg-soft); color: var(--text-dim); }
+.appt-status-control {
+  display: grid;
+  gap: 4px;
+  width: min(220px, 100%);
+}
+.appt-status-control label {
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.appt-status-select {
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 36px 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--appt-tone) 34%, var(--border));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--appt-tone) 8%, var(--card));
+  color: var(--appt-tone);
+  font: 700 0.86rem var(--font-display);
   cursor: pointer;
 }
-.appt-done-btn .icon { width: 16px; height: 16px; }
-.appt-done-btn:hover { background: #dff5ec; }
-.appt-done-btn.is-reopen { border-color: var(--border); background: var(--card); color: var(--text-dim); }
-.appt-done-btn.is-reopen:hover { border-color: var(--accent); color: var(--accent); }
-.appt-list .booking-list-subtitle { margin: 12px 0 0; }
+.appt-status-select:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--appt-tone) 22%, transparent);
+  outline-offset: 2px;
+}
+.appt-record-body {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 18px;
+}
+.appt-date-icon {
+  display: grid;
+  overflow: hidden;
+  width: 64px;
+  border: 1px solid color-mix(in srgb, var(--appt-tone) 24%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--appt-tone) 7%, var(--card));
+  text-align: center;
+}
+.appt-date-icon span {
+  padding: 4px 5px;
+  background: var(--appt-tone);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.appt-date-icon strong {
+  padding: 7px 5px 8px;
+  color: var(--appt-tone);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.appt-record-main { min-width: 0; }
+.appt-record-kicker {
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.appt-date-line {
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.appt-date-line span { color: var(--text-dim); font-weight: 600; }
+.appt-detail-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+.appt-detail-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.appt-detail-chip .icon { width: 14px; height: 14px; }
+.appt-timing-today,
+.appt-timing-overdue {
+  border-color: #f2c6c0;
+  background: #fff5f5;
+  color: var(--danger);
+}
+.appt-notes {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  max-width: 700px;
+  margin-top: 10px;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.appt-notes .icon { width: 15px; height: 15px; flex: none; margin-top: 1px; }
+.appt-notes span { min-width: 0; overflow-wrap: anywhere; }
+.appt-record-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.appt-record-actions button,
+.appt-overdue button {
+  min-height: 44px;
+  padding: 8px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--accent);
+  font: 700 0.78rem var(--font-display);
+  cursor: pointer;
+}
+.appt-record-actions button:hover { border-color: var(--accent); background: var(--card-hover); }
+.appt-record-actions .danger-text { color: var(--text-dim); }
+.appt-record-actions .danger-text:hover { border-color: var(--danger); color: var(--danger); }
+.appt-overdue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 56px;
+  padding: 9px 14px 9px 18px;
+  border-top: 1px solid #f2c6c0;
+  background: #fff7f5;
+  color: var(--danger);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.appt-overdue span { display: inline-flex; align-items: center; gap: 8px; }
+.appt-overdue .icon { width: 17px; height: 17px; flex: none; }
+.appt-overdue button { flex: none; border-color: #f2c6c0; color: var(--danger); }
+.appt-overdue button:hover { background: #fff; border-color: var(--danger); }
+
+@media (max-width: 760px) {
+  .appt-list-heading { align-items: start; flex-direction: column; gap: 8px; }
+  .appt-list-heading > p { text-align: left; }
+  .appt-group-description { display: none; }
+  .appt-record-header { align-items: stretch; flex-direction: column; gap: 12px; }
+  .appt-status-control { width: 100%; }
+  .appt-record-body {
+    grid-template-columns: 56px minmax(0, 1fr);
+    align-items: start;
+    gap: 14px;
+    padding: 16px 14px;
+  }
+  .appt-date-icon { width: 54px; }
+  .appt-record-actions { grid-column: 1 / -1; }
+  .appt-record-actions button { flex: 1; }
+  .appt-overdue { align-items: stretch; flex-direction: column; }
+  .appt-overdue button { width: 100%; }
+}

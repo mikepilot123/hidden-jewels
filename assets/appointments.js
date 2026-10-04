@@ -27,6 +27,16 @@
   const SCRIPT_URL = "https://hidden-jewels.vercel.app/api/leads";
   const LS_PIN = "rpc_hj_pin";
   const DEFAULT_TECHNICIANS = [];
+  const APPOINTMENT_STATUSES = [
+    { key: "still_deciding", label: "Still deciding", description: "Client has not confirmed" },
+    { key: "scheduled", label: "Scheduled", description: "Appointment is confirmed" },
+    { key: "rescheduled", label: "Rescheduled", description: "Date or time changed" },
+    { key: "bought", label: "Bought", description: "Client completed a purchase" },
+    { key: "completed", label: "Completed", description: "Appointment finished" },
+    { key: "cancelled", label: "Cancelled", description: "Appointment cancelled" },
+  ];
+  const OPEN_STATUSES = ["still_deciding", "scheduled", "rescheduled"];
+  const CLOSED_STATUSES = ["bought", "completed", "cancelled"];
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -170,7 +180,7 @@
   function bookedTimesFor(dateStr) {
     return new Set(
       readAppointments()
-        .filter((a) => a.date === dateStr && a.status !== "cancelled" && a.id !== editingAppointmentId)
+        .filter((a) => a.date === dateStr && OPEN_STATUSES.includes(normalizedStatus(a)) && a.id !== editingAppointmentId)
         .map((a) => a.time)
     );
   }
@@ -243,7 +253,7 @@
   // so staff can see the day's load at a glance.
   function bookedAppointmentsFor(dateStr) {
     return readAppointments()
-      .filter((a) => a.date === dateStr && a.status !== "cancelled" && a.id !== editingAppointmentId)
+      .filter((a) => a.date === dateStr && OPEN_STATUSES.includes(normalizedStatus(a)) && a.id !== editingAppointmentId)
       .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
   }
 
@@ -387,48 +397,97 @@
 
   // ---------- appointment list ----------
 
-  // Same card layout as the Leads list: tone stripe + avatar, name with a
-  // status pill, contact line, detail chips and notes, actions on the side.
-  function appointmentState(item) {
-    if (item.status === "completed") return { key: "completed", label: "Completed" };
+  function normalizedStatus(item) {
+    const key = String(item?.status || "scheduled").toLowerCase();
+    return APPOINTMENT_STATUSES.some((status) => status.key === key) ? key : "scheduled";
+  }
+
+  function statusMeta(itemOrStatus) {
+    const key = typeof itemOrStatus === "string" ? itemOrStatus : normalizedStatus(itemOrStatus);
+    return APPOINTMENT_STATUSES.find((status) => status.key === key) || APPOINTMENT_STATUSES[1];
+  }
+
+  function statusOptions(selected) {
+    return APPOINTMENT_STATUSES.map((status) =>
+      `<option value="${status.key}" ${status.key === selected ? "selected" : ""}>${esc(status.label)}</option>`
+    ).join("");
+  }
+
+  function timingState(item) {
     const today = todayISO();
     if (item.date === today) return { key: "today", label: "Today" };
-    if (item.date < today) return { key: "overdue", label: "Not marked done" };
-    return { key: "scheduled", label: "Scheduled" };
+    if (item.date < today && OPEN_STATUSES.includes(normalizedStatus(item))) return { key: "overdue", label: "Past appointment" };
+    return { key: "future", label: "Upcoming" };
+  }
+
+  function daysPast(dateStr) {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const then = new Date(y, m - 1, d);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return Math.max(1, Math.round((now - then) / 86400000));
   }
 
   function appointmentRowHtml(item) {
-    const state = appointmentState(item);
+    const status = statusMeta(item);
+    const timing = timingState(item);
     const phone = item.phone
-      ? `<a class="ticket-phone" href="tel:${esc(item.phone)}"><svg class="icon ticket-phone-icon"><use href="#i-phone"></use></svg>${esc(item.phone)}</a>`
-      : `<span class="ticket-phone no-phone">No phone</span>`;
+      ? `<a class="appt-phone" href="tel:${esc(item.phone)}"><svg class="icon"><use href="#i-phone"></use></svg>${esc(item.phone)}</a>`
+      : `<span class="appt-phone is-empty"><svg class="icon"><use href="#i-phone"></use></svg>No phone number</span>`;
     const [y, m, d] = item.date.split("-").map(Number);
-    const dayLabel = new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
-    return `<article class="lead-card appt-card appt-state-${state.key}${item.id === editingAppointmentId ? " is-editing" : ""}">
-      <div class="lead-avatar appt-avatar" aria-hidden="true">${esc(initials(item.client))}</div>
-      <div class="lead-card-main">
-        <div class="lead-card-top">
-          <div class="lead-card-title">${esc(item.client || "Unnamed client")}</div>
-          <span class="lead-status-pill">${esc(state.label)}</span>
+    const appointmentDate = new Date(y, m - 1, d);
+    const dayLabel = appointmentDate.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+    const overdueDays = timing.key === "overdue" ? daysPast(item.date) : 0;
+    return `<article class="appt-record appt-status-${status.key}${item.id === editingAppointmentId ? " is-editing" : ""}" data-appointment-id="${esc(item.id)}">
+      <header class="appt-record-header">
+        <div class="appt-client-block">
+          <div class="appt-client-name">${esc(item.client || "Unnamed client")}</div>
+          ${phone}
         </div>
-        <div class="lead-card-sub">${esc(dayLabel)} at ${esc(minutesToLabel(timeToMinutes(item.time)))}</div>
-        <div class="lead-phone-wrap">${phone}</div>
-        <div class="lead-detail-grid">
-          <div class="lead-detail${state.key === "today" || state.key === "overdue" ? " is-due" : ""}"><svg class="icon"><use href="#i-calendar"></use></svg><span>${esc(formatDateTime(item.date, item.time))}</span></div>
-          <div class="lead-detail"><svg class="icon"><use href="#i-user"></use></svg><span>${item.technician ? esc(item.technician) : "Any staff"}</span></div>
+        <div class="appt-status-control">
+          <label for="appt-status-${esc(item.id)}">Appointment status</label>
+          <select id="appt-status-${esc(item.id)}" class="appt-status-select" data-appointment-status="${esc(item.id)}" aria-label="Status for ${esc(item.client || "appointment")}">
+            ${statusOptions(status.key)}
+          </select>
         </div>
-        ${item.notes ? `<div class="lead-notes"><svg class="icon"><use href="#i-note"></use></svg><span>${esc(item.notes)}</span></div>` : ""}
-      </div>
-      <div class="lead-card-side">
-        <div class="lead-card-actions">
-          <button type="button" data-edit="${esc(item.id)}">Edit</button>
+      </header>
+      <div class="appt-record-body">
+        <div class="appt-date-icon" aria-hidden="true">
+          <span>${esc(appointmentDate.toLocaleDateString(undefined, { month: "short" }))}</span>
+          <strong>${d}</strong>
+        </div>
+        <div class="appt-record-main">
+          <div class="appt-record-kicker">Appointment</div>
+          <div class="appt-date-line">${esc(dayLabel)} <span>at ${esc(minutesToLabel(timeToMinutes(item.time)))}</span></div>
+          <div class="appt-detail-row">
+            <span class="appt-detail-chip appt-timing-${timing.key}"><svg class="icon"><use href="#i-calendar"></use></svg>${esc(timing.label)}</span>
+            <span class="appt-detail-chip"><svg class="icon"><use href="#i-user"></use></svg>${item.technician ? esc(item.technician) : "Any staff"}</span>
+          </div>
+          ${item.notes ? `<div class="appt-notes"><svg class="icon"><use href="#i-note"></use></svg><span>${esc(item.notes)}</span></div>` : ""}
+        </div>
+        <div class="appt-record-actions">
+          <button type="button" data-edit="${esc(item.id)}">Edit details</button>
           <button type="button" class="danger-text" data-delete="${esc(item.id)}">Delete</button>
         </div>
-        <button type="button" class="appt-done-btn${item.status === "completed" ? " is-reopen" : ""}" data-complete="${esc(item.id)}">
-          <svg class="icon"><use href="#${item.status === "completed" ? "i-refresh" : "i-check"}"></use></svg>${item.status === "completed" ? "Reopen" : "Mark done"}
-        </button>
       </div>
+      ${overdueDays ? `<footer class="appt-overdue"><span><svg class="icon"><use href="#i-calendar"></use></svg>This appointment passed ${overdueDays} ${overdueDays === 1 ? "day" : "days"} ago — update its status</span><button type="button" data-complete="${esc(item.id)}">Mark completed</button></footer>` : ""}
     </article>`;
+  }
+
+  function appointmentGroupHtml(statusKey, items) {
+    if (!items.length) return "";
+    const status = statusMeta(statusKey);
+    return `<section class="appt-status-group appt-group-${status.key}">
+      <div class="appt-group-header">
+        <div>
+          <span class="appt-group-dot" aria-hidden="true"></span>
+          <h3>${esc(status.label)}</h3>
+          <span class="appt-group-description">${esc(status.description)}</span>
+        </div>
+        <span class="appt-group-count" aria-label="${items.length} appointments">${items.length}</span>
+      </div>
+      <div class="appt-group-cards">${items.map(appointmentRowHtml).join("")}</div>
+    </section>`;
   }
 
   function bindRowActions(list) {
@@ -444,11 +503,29 @@
         if (!item) return;
         btn.disabled = true;
         try {
-          const data = await api({ action: "updateAppointment", id: item.id, status: item.status === "completed" ? "scheduled" : "completed" });
+          const data = await api({ action: "updateAppointment", id: item.id, status: "completed" });
           mergeAppointment(data.appointment);
           setSyncStatus("live", syncedLabel());
         } catch (err) {
           setSyncStatus("error", "Couldn't update appointment: " + err.message);
+        }
+        renderList();
+        renderSlots();
+      });
+    });
+    list.querySelectorAll("[data-appointment-status]").forEach((select) => {
+      select.addEventListener("change", async () => {
+        const item = APPOINTMENTS.find((appointment) => appointment.id === select.dataset.appointmentStatus);
+        if (!item || normalizedStatus(item) === select.value) return;
+        const previous = normalizedStatus(item);
+        select.disabled = true;
+        try {
+          const data = await api({ action: "updateAppointment", id: item.id, status: select.value });
+          mergeAppointment(data.appointment);
+          setSyncStatus("live", `${item.client}'s status updated to ${statusMeta(select.value).label}.`);
+        } catch (err) {
+          select.value = previous;
+          setSyncStatus("error", "Couldn't update appointment status: " + err.message);
         }
         renderList();
         renderSlots();
@@ -503,34 +580,26 @@
     $("appointmentForm")?.scrollIntoView({ block: "start" });
   }
 
-  // View = everything still scheduled (upcoming first, then past visits
-  // nobody has marked Done yet); Completed = visits marked Done, newest
-  // first.
+  // Active and closed appointments are grouped by their workflow state,
+  // keeping the list scannable and progress visible at a glance.
   function renderList() {
-    const today = todayISO();
     const byTime = (a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`);
-    const all = readAppointments().filter((a) => a.status !== "cancelled");
-    const scheduled = all.filter((a) => a.status !== "completed");
-    const upcoming = scheduled.filter((a) => a.date >= today).sort(byTime);
-    const overdue = scheduled.filter((a) => a.date < today).sort((a, b) => byTime(b, a));
-    const completed = all.filter((a) => a.status === "completed").sort((a, b) => byTime(b, a));
+    const all = readAppointments();
+    const open = all.filter((item) => OPEN_STATUSES.includes(normalizedStatus(item))).sort(byTime);
+    const closed = all.filter((item) => CLOSED_STATUSES.includes(normalizedStatus(item))).sort((a, b) => byTime(b, a));
 
     const list = $("appointmentList");
     if (list) {
-      let html = upcoming.length
-        ? upcoming.map(appointmentRowHtml).join("")
-        : `<p class="booking-empty">No upcoming appointments.</p>`;
-      if (overdue.length) {
-        html += `<h3 class="booking-list-subtitle">Past — not marked done yet</h3>` + overdue.map(appointmentRowHtml).join("");
-      }
-      list.innerHTML = html;
+      list.innerHTML = open.length
+        ? OPEN_STATUSES.map((status) => appointmentGroupHtml(status, open.filter((item) => normalizedStatus(item) === status))).join("")
+        : `<p class="booking-empty">No active appointments.</p>`;
       bindRowActions(list);
     }
     const doneList = $("appointmentCompletedList");
     if (doneList) {
-      doneList.innerHTML = completed.length
-        ? completed.map(appointmentRowHtml).join("")
-        : `<p class="booking-empty">No completed appointments yet. Mark an appointment Done to move it here.</p>`;
+      doneList.innerHTML = closed.length
+        ? CLOSED_STATUSES.map((status) => appointmentGroupHtml(status, closed.filter((item) => normalizedStatus(item) === status))).join("")
+        : `<p class="booking-empty">No closed appointments yet.</p>`;
       bindRowActions(doneList);
     }
   }
