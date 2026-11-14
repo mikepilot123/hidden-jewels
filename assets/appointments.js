@@ -78,10 +78,22 @@
     APPOINTMENTS = Array.isArray(list) ? list : [];
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(APPOINTMENTS)); } catch (_) { /* storage unavailable */ }
   }
+  // Bumped whenever this device changes the list itself (book, edit, status,
+  // delete). A refresh that was already in flight may carry a snapshot taken
+  // before that change; applying it would make the new booking vanish (or a
+  // deleted one reappear) on the very device that made it, and overwrite the
+  // offline cache with the stale copy. loadAppointments checks this and
+  // refetches instead.
+  let localChangeSeq = 0;
   function mergeAppointment(appointment) {
     if (!appointment || !appointment.id) return;
+    localChangeSeq++;
     const rest = APPOINTMENTS.filter((a) => a.id !== appointment.id);
     setAppointments(rest.concat(appointment));
+  }
+  function removeAppointment(id) {
+    localChangeSeq++;
+    setAppointments(APPOINTMENTS.filter((a) => a.id !== id));
   }
   function readCache() {
     try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "[]"); }
@@ -122,23 +134,39 @@
   let loadInFlight = null;
   function loadAppointments() {
     if (!getPin()) {
-      setSyncStatus("stale", "Save the team PIN in Settings to sync appointments across devices.");
+      setSyncStatus("error", "This device isn't connected — bookings made on other devices won't show here. Enter the team PIN in Settings.");
+      renderList();
       return Promise.resolve();
     }
     if (loadInFlight) return loadInFlight;
     loadInFlight = (async () => {
       try {
-        const data = await api({ action: "listAppointments" });
-        setAppointments(data.appointments || []);
-        await migrateLegacyAppointments();
+        let applied = false;
+        // A few attempts: retry while this device changed the list mid-fetch.
+        for (let attempt = 0; attempt < 3 && !applied; attempt++) {
+          const seq = localChangeSeq;
+          const data = await api({ action: "listAppointments" });
+          if (seq !== localChangeSeq) continue;
+          setAppointments(data.appointments || []);
+          applied = true;
+        }
+        if (!applied) return; // kept changing; the next refresh will reconcile
         lastSyncedAt = Date.now();
-        setSyncStatus("live", syncedLabel());
-        renderList();
-        renderSlots();
+        const notUploaded = await migrateLegacyAppointments();
+        setSyncStatus(
+          notUploaded ? "error" : "live",
+          notUploaded
+            ? `${syncedLabel()} — ${notUploaded} older booking${notUploaded === 1 ? "" : "s"} saved only on this device couldn't be uploaded yet; will retry.`
+            : syncedLabel()
+        );
       } catch (err) {
         setSyncStatus("error", "Couldn't sync appointments (" + err.message + ") — showing this device's last saved copy.");
       } finally {
         loadInFlight = null;
+        // Render whatever we now hold, success or not — a failure part-way
+        // (e.g. in the legacy upload) must not hide the list just downloaded.
+        renderList();
+        renderSlots();
       }
     })();
     return loadInFlight;
@@ -146,28 +174,38 @@
 
   // One-time upload of bookings made before appointments synced through the
   // server. The original ids are kept (the server ignores ids it already
-  // has), so re-running after a partial failure can't duplicate.
+  // has), so re-running after a partial failure can't duplicate. Each record
+  // is uploaded on its own: one the server rejects (or a network blip) must
+  // not stop the others or block this device's sync. Records that didn't
+  // make it stay in the legacy key and are retried on the next sync.
+  // Returns how many are still waiting to be uploaded.
   async function migrateLegacyAppointments() {
     let raw = "";
-    try { raw = localStorage.getItem(LEGACY_APPOINTMENTS_KEY) || ""; } catch (_) { return; }
-    if (!raw) return;
+    try { raw = localStorage.getItem(LEGACY_APPOINTMENTS_KEY) || ""; } catch (_) { return 0; }
+    if (!raw) return 0;
     let legacy = [];
     try { legacy = JSON.parse(raw) || []; } catch (_) { legacy = []; }
+    if (!Array.isArray(legacy)) legacy = [];
     const known = new Set(APPOINTMENTS.map((a) => a.id));
+    const failed = [];
     let uploaded = 0;
     for (const item of legacy) {
       if (!item || !item.id || known.has(item.id) || !item.date || !item.time || !item.client) continue;
-      await api(Object.assign({ action: "addAppointment", legacy: true }, item));
-      uploaded++;
-    }
-    if (uploaded) {
-      const data = await api({ action: "listAppointments" });
-      setAppointments(data.appointments || []);
+      try {
+        const data = await api(Object.assign({ action: "addAppointment", legacy: true }, item));
+        mergeAppointment(data.appointment);
+        uploaded++;
+      } catch (err) {
+        console.warn("Couldn't upload older booking", item, err);
+        failed.push(item);
+      }
     }
     try {
-      localStorage.setItem(LEGACY_APPOINTMENTS_KEY + "_backup", raw);
-      localStorage.removeItem(LEGACY_APPOINTMENTS_KEY);
+      if (uploaded || !failed.length) localStorage.setItem(LEGACY_APPOINTMENTS_KEY + "_backup", raw);
+      if (failed.length) localStorage.setItem(LEGACY_APPOINTMENTS_KEY, JSON.stringify(failed));
+      else localStorage.removeItem(LEGACY_APPOINTMENTS_KEY);
     } catch (_) { /* storage unavailable */ }
+    return failed.length;
   }
 
   function isClosedDay(date) { return date.getDay() === 0; } // Sunday
@@ -538,7 +576,7 @@
         btn.disabled = true;
         try {
           await api({ action: "deleteAppointment", id: item.id });
-          setAppointments(APPOINTMENTS.filter((a) => a.id !== item.id));
+          removeAppointment(item.id);
           if (editingAppointmentId === item.id) resetSelection();
           setSyncStatus("live", syncedLabel());
         } catch (err) {
@@ -588,20 +626,30 @@
     const open = all.filter((item) => OPEN_STATUSES.includes(normalizedStatus(item))).sort(byTime);
     const closed = all.filter((item) => CLOSED_STATUSES.includes(normalizedStatus(item))).sort((a, b) => byTime(b, a));
 
+    // Without the team PIN this device never talks to the server, so the list
+    // is only what was cached here — say so where staff are actually looking,
+    // not just in the small status line.
+    const notConnected = getPin()
+      ? ""
+      : `<p class="appt-edit-banner appt-not-connected">This device isn't connected, so appointments booked on other devices won't show here. <button type="button" class="ghost-btn" data-open-settings>Enter the team PIN in Settings</button></p>`;
+
     const list = $("appointmentList");
     if (list) {
-      list.innerHTML = open.length
+      list.innerHTML = notConnected + (open.length
         ? OPEN_STATUSES.map((status) => appointmentGroupHtml(status, open.filter((item) => normalizedStatus(item) === status))).join("")
-        : `<p class="booking-empty">No active appointments.</p>`;
+        : `<p class="booking-empty">No active appointments.</p>`);
       bindRowActions(list);
     }
     const doneList = $("appointmentCompletedList");
     if (doneList) {
-      doneList.innerHTML = closed.length
+      doneList.innerHTML = notConnected + (closed.length
         ? CLOSED_STATUSES.map((status) => appointmentGroupHtml(status, closed.filter((item) => normalizedStatus(item) === status))).join("")
-        : `<p class="booking-empty">No closed appointments yet.</p>`;
+        : `<p class="booking-empty">No closed appointments yet.</p>`);
       bindRowActions(doneList);
     }
+    document.querySelectorAll("[data-open-settings]").forEach((btn) => {
+      btn.addEventListener("click", () => window.RPC_SHOW_VIEW && window.RPC_SHOW_VIEW("settings"));
+    });
   }
 
   function formatDateTime(dateStr, timeStr) {

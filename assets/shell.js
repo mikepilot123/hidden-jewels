@@ -256,6 +256,48 @@
     window.addEventListener("resize", setH);
   })();
 
+  // ---- Stale-app guard -------------------------------------------------------
+  // A tablet/phone that keeps the app open (or pinned to the home screen) can
+  // go days without reloading index.html, so it keeps running whatever build
+  // it first loaded — including builds that saved appointments only on that
+  // device. Compare our build's cache-bust version with the live index.html
+  // and pick up a newer build: straight away if nothing is being typed,
+  // otherwise via a banner so in-progress input isn't lost.
+  (function () {
+    const ownSrc = document.querySelector('script[src*="assets/shell.js"]')?.getAttribute("src") || "";
+    const current = ownSrc.split("?v=")[1] || "";
+    if (!current) return;
+    let notified = false;
+    function hasUnsavedInput() {
+      return [...document.querySelectorAll("form input, form textarea")].some((el) =>
+        el.id !== "cfgPin" && !["hidden", "checkbox", "radio", "button", "submit"].includes(el.type) && String(el.value || "").trim()
+      );
+    }
+    function showUpdateBanner() {
+      if (notified) return;
+      notified = true;
+      const bar = document.createElement("div");
+      bar.className = "update-banner";
+      bar.setAttribute("role", "status");
+      bar.innerHTML = `<span>A newer version of the app is available.</span><button type="button" class="primary-btn">Reload now</button>`;
+      bar.querySelector("button").addEventListener("click", () => location.reload());
+      document.body.appendChild(bar);
+    }
+    async function check() {
+      try {
+        const res = await fetch("index.html?_=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) return;
+        const m = (await res.text()).match(/assets\/shell\.js\?v=([^"'&\s]+)/);
+        if (!m || m[1] === current) return;
+        if (hasUnsavedInput()) showUpdateBanner();
+        else location.reload();
+      } catch (_) { /* offline — try again later */ }
+    }
+    setTimeout(check, 5000);
+    setInterval(() => { if (!document.hidden) check(); }, 10 * 60 * 1000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+  })();
+
   // ---- Go ------------------------------------------------------------------
   navigateTo("appointments");
 })();
