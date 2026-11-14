@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <!-- Bump ?v= on every asset below whenever one of them changes, otherwise
        returning browsers keep serving the previous copy from cache. -->
-  <link rel="stylesheet" href="assets/style.css?v=appt-sync-fix-1" />
+  <link rel="stylesheet" href="assets/style.css?v=appt-search-1" />
 </head>
 <body>
   <svg class="icon-sprite" aria-hidden="true" focusable="false">
@@ -87,6 +87,23 @@
       <button type="button" class="appt-subnav-btn" data-appt-panel="view" role="tab" aria-selected="false">View appointments</button>
       <button type="button" class="appt-subnav-btn" data-appt-panel="completed" role="tab" aria-selected="false">Closed</button>
     </div>
+
+    <div class="leads-searchbar appt-searchbar">
+      <svg class="icon"><use href="#i-search"></use></svg>
+      <input id="apptSearch" type="search" inputmode="search" autocomplete="off" placeholder="Search all appointments by client, phone, staff or notes…" aria-label="Search appointments" />
+      <button id="clearApptSearch" class="inventory-clear-search" aria-label="Clear appointment search" hidden><svg class="icon"><use href="#i-xmark"></use></svg></button>
+    </div>
+
+    <section id="apptSearchResults" class="booking-list-card appt-search-results" hidden>
+      <div class="appt-list-heading">
+        <div>
+          <p class="section-kicker">Search results</p>
+          <h2 id="apptSearchTitle" class="booking-list-title">Matching appointments</h2>
+        </div>
+        <p>Searches active and closed appointments together.</p>
+      </div>
+      <div id="apptSearchList" class="ops-list leads-list appt-list" aria-live="polite"></div>
+    </section>
 
     <section class="appt-panel" data-appt-panel-section="create">
     <section class="booking-wizard-card">
@@ -494,9 +511,9 @@
     <p>Hidden Jewels Co. · Internal team use</p>
   </footer>
 
-  <script src="assets/shell.js?v=appt-sync-fix-1"></script>
-  <script src="assets/appointments.js?v=appt-sync-fix-1"></script>
-  <script src="assets/leads.js?v=appt-sync-fix-1"></script>
-  <script src="assets/preorders.js?v=appt-sync-fix-1"></script>
+  <script src="assets/shell.js?v=appt-search-1"></script>
+  <script src="assets/appointments.js?v=appt-search-1"></script>
+  <script src="assets/leads.js?v=appt-search-1"></script>
+  <script src="assets/preorders.js?v=appt-search-1"></script>
 </body>
 </html>

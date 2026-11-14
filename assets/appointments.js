@@ -51,6 +51,8 @@
   let editingOriginal = null; // { date, time } the edited appointment started at
   let saving = false;
   let lastSyncedAt = 0;
+  let searchQuery = "";
+  let currentPanel = "create";
 
   function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
   function todayISO() { return toISODate(new Date()); }
@@ -650,6 +652,74 @@
     document.querySelectorAll("[data-open-settings]").forEach((btn) => {
       btn.addEventListener("click", () => window.RPC_SHOW_VIEW && window.RPC_SHOW_VIEW("settings"));
     });
+    renderSearch();
+  }
+
+  // ---------- search ----------
+  // One search across every appointment, active and closed, so a client
+  // whose visit was marked Bought/Completed/Cancelled (and so moved off the
+  // "View appointments" tab) is still found. Every word typed must match
+  // somewhere: name, phone (formatting ignored), staff, notes, status or date.
+
+  function searchHaystack(item) {
+    const [y, m, d] = String(item.date || "").split("-").map(Number);
+    const dateText = y ? new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "";
+    return [item.client, item.phone, item.technician, item.notes, statusMeta(item).label, dateText, item.date]
+      .join(" ")
+      .toLowerCase();
+  }
+
+  function matchesSearch(item, words) {
+    const hay = searchHaystack(item);
+    const phoneDigits = String(item.phone || "").replace(/\D/g, "");
+    return words.every((word) => {
+      if (hay.includes(word)) return true;
+      const digits = word.replace(/\D/g, "");
+      return digits.length >= 3 && digits === word.replace(/[\s().+-]/g, "") && phoneDigits.includes(digits);
+    });
+  }
+
+  function renderSearch() {
+    const results = $("apptSearchResults");
+    const list = $("apptSearchList");
+    if (!results || !list) return;
+    const query = searchQuery.trim().toLowerCase();
+    const panels = document.querySelectorAll(".appt-panel[data-appt-panel-section]");
+    if (!query) {
+      results.hidden = true;
+      list.innerHTML = "";
+      panels.forEach((section) => { section.hidden = section.dataset.apptPanelSection !== currentPanel; });
+      return;
+    }
+    panels.forEach((section) => { section.hidden = true; });
+    results.hidden = false;
+    const words = query.split(/\s+/).filter(Boolean);
+    const byTime = (a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`);
+    const matches = readAppointments().filter((item) => matchesSearch(item, words));
+    const open = matches.filter((item) => OPEN_STATUSES.includes(normalizedStatus(item))).sort(byTime);
+    const closed = matches.filter((item) => CLOSED_STATUSES.includes(normalizedStatus(item))).sort((a, b) => byTime(b, a));
+    const title = $("apptSearchTitle");
+    if (title) {
+      title.textContent = matches.length
+        ? `${matches.length} appointment${matches.length === 1 ? " matches" : "s match"} “${searchQuery.trim()}”`
+        : `No appointments match “${searchQuery.trim()}”`;
+    }
+    const section = (heading, items) => items.length
+      ? `<p class="appt-search-group">${esc(heading)} · ${items.length}</p>${items.map(appointmentRowHtml).join("")}`
+      : "";
+    list.innerHTML = matches.length
+      ? section("Active (View appointments tab)", open) + section("Closed tab", closed)
+      : `<p class="booking-empty">Nothing found. Check the spelling, or try just the first or last name or part of the phone number.${getPin() ? "" : " This device isn't connected, so only appointments saved on it can be searched."}</p>`;
+    bindRowActions(list);
+  }
+
+  function setSearch(value) {
+    searchQuery = value;
+    const input = $("apptSearch");
+    if (input && input.value !== value) input.value = value;
+    const clear = $("clearApptSearch");
+    if (clear) clear.hidden = !value;
+    renderSearch();
   }
 
   function formatDateTime(dateStr, timeStr) {
@@ -667,6 +737,9 @@
     const form = $("appointmentForm");
     if (panel !== "create" && editingAppointmentId) resetSelection();
     if (panel === "create" && form && form.hidden) resetSelection();
+    // Picking a tab (or Edit on a search result) leaves search mode.
+    currentPanel = panel;
+    if (searchQuery) setSearch("");
     document.querySelectorAll(".appt-panel[data-appt-panel-section]").forEach((section) => {
       section.hidden = section.dataset.apptPanelSection !== panel;
     });
@@ -776,6 +849,18 @@
     });
     $("apptCancelEdit")?.addEventListener("click", () => resetSelection());
     $("apptRefresh")?.addEventListener("click", () => loadAppointments());
+    $("apptSearch")?.addEventListener("input", (event) => {
+      setSearch(event.target.value);
+      // Search the freshest list, not just what this device last saw.
+      if (event.target.value && Date.now() - lastSyncedAt > 15000) loadAppointments();
+    });
+    $("apptSearch")?.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setSearch("");
+    });
+    $("clearApptSearch")?.addEventListener("click", () => {
+      setSearch("");
+      $("apptSearch")?.focus();
+    });
 
     // Keep every device in step: refresh once a minute while the app is
     // open and visible, and straight away when it comes back to the

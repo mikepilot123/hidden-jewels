@@ -4045,3 +4045,19 @@ video.media-viewer-media {
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
   font-size: 0.9rem;
 }
+
+/* Appointment search: one box above the tabs, searching active + closed. */
+.appt-searchbar { margin: 0 0 18px; }
+.appt-search-results[hidden],
+.appt-panel[hidden] { display: none; }
+.appt-search-group {
+  margin: 16px 0 8px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.appt-search-group:first-child { margin-top: 0; }
+/* We draw our own clear button — hide the browser's built-in one. */
+#apptSearch::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
